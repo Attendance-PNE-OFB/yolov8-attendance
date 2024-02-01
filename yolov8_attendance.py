@@ -9,16 +9,15 @@ import time
 import pytz
 from datetime import datetime
 
-import tensorflow as tf
 import pandas as pd
-
-from tf2_yolov4.anchors import YOLOV4_ANCHORS
-from tf2_yolov4.model import YOLOv4
 
 from PIL import UnidentifiedImageError, Image
 from PIL.ExifTags import TAGS
 
 from ftplib import FTP
+
+from ultralytics import YOLO
+
 
 ###############
 ## functions ##
@@ -65,30 +64,30 @@ def number_of_files(folder):
     return nb_elements
 
 # Used to classify the images
+# Images formats available :  .bmp .dng .jpeg .jpg .mpo .png .tif .tiff .webp .pfm
 def classification(folder_pics, nb_elements, HEIGHT, WIDTH, model, CLASSES, classfication_date_file):
     res = []
     count = -1
     for root, dirs, files in os.walk(folder_pics):
         for file in files:
             # If the image modification date is less than the last classification date, then we have already classified it
-            if not already_classify(os.path.join(root, file), get_last_classification_date(classfication_date_file)):
-                if (file.endswith(".jpg")) or (file.endswith(".JPG")) or (file.endswith(".png")) or (file.endswith(".PNG")) or (file.endswith(".jpeg")) or (file.endswith(".JPEG")) :# jpg, png or jpeg
+            if already_classify(os.path.join(root, file), get_last_classification_date(classfication_date_file)):
+                # if (file.endswith(".jpg")) or (file.endswith(".JPG")) or (file.endswith(".png")) or (file.endswith(".PNG")) or (file.endswith(".jpeg")) or (file.endswith(".JPEG")) :# jpg, png or jpeg
                     count+=1
                     if count%10 == 0:
                         print(f"{nb_elements-count} more images to classify")
-                                
+
                     try:
                         where = os.path.join(root, file)
-                        image = tf.io.read_file(where)
-
-                        image = tf.image.decode_image(image)
-                        image = tf.image.resize(image, (HEIGHT, WIDTH))
-                        images = tf.expand_dims(image, axis=0) / 255.0
+                        # image = tf.io.read_file(where)
+                        # image = tf.image.decode_image(image)
+                        # image = tf.image.resize(image, (HEIGHT, WIDTH))
+                        # images = tf.expand_dims(image, axis=0) / 255.0
                     except Exception as e:
                         print("A corrupted image was ignored")
                                 
                     # Predictions
-                    boxes, scores, classes, valid_detections = model.predict(images)
+                    boxes, scores, classes, valid_detections = model(where)
                                     
                     # Save results
                     for i, j in zip(classes[0].tolist(), scores[0].tolist()):
@@ -375,17 +374,19 @@ def main():
 
     HEIGHT, WIDTH = (640, 960)
 
-    model = YOLOv4(
-        input_shape=(HEIGHT, WIDTH, 3),
-        anchors=YOLOV4_ANCHORS,
-        num_classes=80,
-        training=False,
-        yolo_max_boxes=100,
-        yolo_iou_threshold=0.5,
-        yolo_score_threshold=thresh,
-    )
+    # model = YOLOv4(
+    #     input_shape=(HEIGHT, WIDTH, 3),
+    #     anchors=YOLOV4_ANCHORS,
+    #     num_classes=80,
+    #     training=False,
+    #     yolo_max_boxes=100,
+    #     yolo_iou_threshold=0.5,
+    #     yolo_score_threshold=thresh,
+    # )
 
-    model.load_weights(f'{folder_model}')
+    model = YOLO('model/yolov8x.pt')  # pretrained YOLOv8n model
+
+    #model.load_weights(f'{folder_model}')
 
 ##########
 ## data ##
@@ -428,17 +429,17 @@ def main():
                     nb_elements = number_of_files(current_path_dir)
                     res = classification(current_path_dir, nb_elements, HEIGHT, WIDTH, model, CLASSES, classfication_date_file)
                     # Avoid to create empty output files
-                    if res!=[]:
-                        dataframe_metadonnees = pd.DataFrame(load_metadata(current_path_dir))
-                        dataframe = processing_output(config, dataframe_metadonnees, res)
-                        # Export to output format
-                        timestr = time.strftime("%Y%m%d%H%M%S000") # unique name based on date.time
-                        if config['output_format']=="csv":
-                            dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.csv', index=True)
-                        elif config['output_format']=="dat":
-                            dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.dat', index=True)
-                        else: # default case CSV
-                            dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.csv', index=True)
+                    #if res!=[]:
+                    dataframe_metadonnees = pd.DataFrame(load_metadata(current_path_dir))
+                    dataframe = processing_output(config, dataframe_metadonnees, res)
+                    # Export to output format
+                    timestr = time.strftime("%Y%m%d%H%M%S000") # unique name based on date.time
+                    if config['output_format']=="csv":
+                        dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.csv', index=True)
+                    elif config['output_format']=="dat":
+                        dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.dat', index=True)
+                    else: # default case CSV
+                        dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.csv', index=True)
 
     # We save the classification date
     set_last_classification_date(classfication_date_file, datetime.now())

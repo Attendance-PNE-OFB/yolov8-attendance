@@ -1,4 +1,6 @@
 tensorflow>2
-tf2-yolov4
-pandas
-Pillow
+pandas~=2.2.0
+Pillow~=10.2.0
+setuptools~=68.2.0
+pytz~=2023.4
+ultralytics~=8.1.8
