@@ -72,7 +72,7 @@ def classification(folder_pics, nb_elements, HEIGHT, WIDTH, model, CLASSES, clas
         for file in files:
             # If the image modification date is less than the last classification date, then we have already classified it
             if already_classify(os.path.join(root, file), get_last_classification_date(classfication_date_file)):
-                # if (file.endswith(".jpg")) or (file.endswith(".JPG")) or (file.endswith(".png")) or (file.endswith(".PNG")) or (file.endswith(".jpeg")) or (file.endswith(".JPEG")) :# jpg, png or jpeg
+                if (file.endswith(".jpg")) or (file.endswith(".JPG")) or (file.endswith(".png")) or (file.endswith(".PNG")) or (file.endswith(".jpeg")) or (file.endswith(".JPEG")) :# jpg, png or jpeg
                     count+=1
                     if count%10 == 0:
                         print(f"{nb_elements-count} more images to classify")
@@ -87,10 +87,16 @@ def classification(folder_pics, nb_elements, HEIGHT, WIDTH, model, CLASSES, clas
                         print("A corrupted image was ignored")
                                 
                     # Predictions
-                    boxes, scores, classes, valid_detections = model(where)
-                                    
-                    # Save results
-                    for i, j in zip(classes[0].tolist(), scores[0].tolist()):
+                    #boxes, scores, classes, valid_detections
+                    results = model(where)
+
+
+                    # print("Results : ", results)
+                    # print("Classes : ", classes)
+                    # print("Scores : ", scores)
+
+                    #Save results
+                    for i, j in zip(results[0].boxes.cls, results[0].boxes.conf):
                         if j > 0:
                             res.append([CLASSES[int(i)],j,where])
     return res
@@ -374,18 +380,7 @@ def main():
 
     HEIGHT, WIDTH = (640, 960)
 
-    # model = YOLOv4(
-    #     input_shape=(HEIGHT, WIDTH, 3),
-    #     anchors=YOLOV4_ANCHORS,
-    #     num_classes=80,
-    #     training=False,
-    #     yolo_max_boxes=100,
-    #     yolo_iou_threshold=0.5,
-    #     yolo_score_threshold=thresh,
-    # )
-
-    model = YOLO('model/yolov8x.pt')  # pretrained YOLOv8n model
-
+    model = YOLO(folder_model)
     #model.load_weights(f'{folder_model}')
 
 ##########
@@ -429,17 +424,17 @@ def main():
                     nb_elements = number_of_files(current_path_dir)
                     res = classification(current_path_dir, nb_elements, HEIGHT, WIDTH, model, CLASSES, classfication_date_file)
                     # Avoid to create empty output files
-                    #if res!=[]:
-                    dataframe_metadonnees = pd.DataFrame(load_metadata(current_path_dir))
-                    dataframe = processing_output(config, dataframe_metadonnees, res)
-                    # Export to output format
-                    timestr = time.strftime("%Y%m%d%H%M%S000") # unique name based on date.time
-                    if config['output_format']=="csv":
-                        dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.csv', index=True)
-                    elif config['output_format']=="dat":
-                        dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.dat', index=True)
-                    else: # default case CSV
-                        dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.csv', index=True)
+                    if res!=[]:
+                        dataframe_metadonnees = pd.DataFrame(load_metadata(current_path_dir))
+                        dataframe = processing_output(config, dataframe_metadonnees, res)
+                        # Export to output format
+                        timestr = time.strftime("%Y%m%d%H%M%S000") # unique name based on date.time
+                        if config['output_format']=="csv":
+                            dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.csv', index=True)
+                        elif config['output_format']=="dat":
+                            dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.dat', index=True)
+                        else: # default case CSV
+                            dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.csv', index=True)
 
     # We save the classification date
     set_last_classification_date(classfication_date_file, datetime.now())
