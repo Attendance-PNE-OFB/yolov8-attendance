@@ -1,7 +1,6 @@
 ###################
 ## load packages ##
 ###################
-
 import os
 import json
 import timeit
@@ -65,9 +64,10 @@ def number_of_files(folder):
 
 # Used to classify the images
 # Images formats available :  .bmp .dng .jpeg .jpg .mpo .png .tif .tiff .webp .pfm
-def classification(folder_pics, nb_elements, HEIGHT, WIDTH, model, CLASSES, classfication_date_file):
+def classification(folder_pics, nb_elements, HEIGHT, WIDTH, model, classfication_date_file):
     res = []
     count = -1
+    dataframe = None
     for root, dirs, files in os.walk(folder_pics):
         for file in files:
             # If the image modification date is less than the last classification date, then we have already classified it
@@ -88,7 +88,9 @@ def classification(folder_pics, nb_elements, HEIGHT, WIDTH, model, CLASSES, clas
                                 
                     # Predictions
                     #boxes, scores, classes, valid_detections
-                    results = model(where)
+                    dataframe = process_output(model(where, classes=[0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31]),dataframe)
+
+
 
 
                     # print("Results : ", results)
@@ -96,10 +98,13 @@ def classification(folder_pics, nb_elements, HEIGHT, WIDTH, model, CLASSES, clas
                     # print("Scores : ", scores)
 
                     #Save results
-                    for i, j in zip(results[0].boxes.cls, results[0].boxes.conf):
-                        if j > 0:
-                            res.append([CLASSES[int(i)],j,where])
-    return res
+                    # for i, j in zip(results[0].boxes.cls, results[0].boxes.conf):
+                    #     if j > 0:
+                    #         res.append([CLASSES[int(i)],j,where])
+    dataframe.dropna(how='all', inplace=True)
+    dataframe.fillna(0, inplace=True)
+    dataframe.reset_index(names='photo', inplace=True)
+    return dataframe
 
 # Used to round off dates
 def arrondir_date(dt, periode, tz):
@@ -121,6 +126,21 @@ def arrondir_date_year(dt, tz):
     return date.isoformat()
 
 # Used to transform the output csv of the classification model into a more usable csv
+
+def process_output(result, dataframe=None):
+    if(dataframe is None):
+        dataframe = pd.DataFrame(columns=[result[0].names[cle] for cle in [0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31]])
+    image_name = result[0].path.split('/')[-1]
+    dataframe = pd.concat([dataframe, pd.Series(index=[image_name])])
+
+    for cls in result[0].boxes.cls:
+        if pd.isna(dataframe.loc[image_name, result[0].names[cls.item()]]):
+            dataframe.loc[image_name, result[0].names[cls.item()]] = 1
+        else:
+            dataframe.loc[image_name, result[0].names[cls.item()]] += 1
+
+    return dataframe
+
 def processing_output(config, dataframe_metadonnees, res):
     tz = pytz.timezone("Europe/Paris")
 
@@ -312,9 +332,7 @@ def download_files_and_classify_from_FTP(ftp, config, directory, FTP_DIRECTORY, 
                 # Export
                 timestr = time.strftime("%Y%m%d%H%M%S000") # unique name based on date.time
                 procedure = directory.split('/')[2]
-                if config['output_format']=="csv":
-                    dataframe.to_csv(f'{output_folder}/{procedure}_{timestr}.csv', index=True)
-                elif config['output_format']=="dat":
+                if config['output_format']=="dat":
                     dataframe.to_csv(f'{output_folder}/{procedure}_{timestr}.dat', index=True)
                 else: # default case CSV
                     dataframe.to_csv(f'{output_folder}/{procedure}_{timestr}.csv', index=True)
@@ -383,28 +401,6 @@ def main():
     model = YOLO(folder_model)
     #model.load_weights(f'{folder_model}')
 
-##########
-## data ##
-##########
-
-    ## based on COCO dataset and 80 classes
-    CLASSES = [
-        'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
-        'train', 'truck', 'boat', 'traffic light', 'fire hydrant',
-        'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse',
-        'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack',
-        'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis',
-        'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove',
-        'skateboard', 'surfboard', 'tennis racket', 'bottle', 'wine glass',
-        'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich',
-        'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake',
-        'chair', 'couch', 'potted plant', 'bed', 'dining table',
-        'toilet', 'tv', 'laptop', 'mouse', 'remote', 'keyboard',
-        'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator',
-        'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier',
-        'toothbrush'
-    ]
-
 ###############
 ## run model ##
 ###############
@@ -412,7 +408,7 @@ def main():
     start = timeit.default_timer()
     classfication_date_file = os.path.join(os.getcwd(), "last_classification_date.txt")
     if Use_FTP:
-        download_files_and_classify_from_FTP(ftp, config, FTP_DIRECTORY, FTP_DIRECTORY, HEIGHT, WIDTH, model, CLASSES, local_folder, output_folder, classfication_date_file)
+        download_files_and_classify_from_FTP(ftp, config, FTP_DIRECTORY, FTP_DIRECTORY, HEIGHT, WIDTH, model, local_folder, output_folder, classfication_date_file)
         ftp.quit()
     else:
         # We browse our local directory and run classification once for each subfolder
@@ -422,19 +418,20 @@ def main():
                 if root == local_folder:
                     current_path_dir = os.path.join(root, dir)
                     nb_elements = number_of_files(current_path_dir)
-                    res = classification(current_path_dir, nb_elements, HEIGHT, WIDTH, model, CLASSES, classfication_date_file)
+                    dataframe = classification(current_path_dir, nb_elements, HEIGHT, WIDTH, model, classfication_date_file)
+                    timestr = time.strftime("%Y%m%d%H%M%S000")  # unique name based on date.time
+                    if config['output_format'] == "dat":
+                        dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.dat', index=True)
+                    else:  # default case CSV
+                        dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.csv', index=True)
                     # Avoid to create empty output files
-                    if res!=[]:
-                        dataframe_metadonnees = pd.DataFrame(load_metadata(current_path_dir))
-                        dataframe = processing_output(config, dataframe_metadonnees, res)
+                    #if dataframe!=[]:
+                        #dataframe_metadonnees = pd.DataFrame(load_metadata(current_path_dir))
+                        #dataframe = processing_output(config, dataframe_metadonnees, res)
+                        #dataframe = process_output(res)
                         # Export to output format
-                        timestr = time.strftime("%Y%m%d%H%M%S000") # unique name based on date.time
-                        if config['output_format']=="csv":
-                            dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.csv', index=True)
-                        elif config['output_format']=="dat":
-                            dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.dat', index=True)
-                        else: # default case CSV
-                            dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.csv', index=True)
+
+
 
     # We save the classification date
     set_last_classification_date(classfication_date_file, datetime.now())
