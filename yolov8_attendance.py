@@ -16,6 +16,8 @@ from PIL.ExifTags import TAGS
 from ftplib import FTP
 
 from ultralytics import YOLO
+import numpy as np
+import re
 
 
 ###############
@@ -62,34 +64,71 @@ def number_of_files(folder):
         nb_elements += len(files)
     return nb_elements
 
+def IsImage(path):
+    return path.endswith(".jpg") or path.endswith(".png") or path.endswith(".jpeg") or path.endswith(".JPG") or path.endswith(".PNG") or path.endswith(".JPEG")
+
 # Used to classify the images
 # Images formats available :  .bmp .dng .jpeg .jpg .mpo .png .tif .tiff .webp .pfm
-def classification(folder_pics, nb_elements, HEIGHT, WIDTH, model, classfication_date_file):
-    res = []
-    count = -1
-    dataframe = None
+def classification(folder_pics,model, classfication_date_file,classes=[0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31],conf=0.75,batch=50,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
+    results = []
+    
     for root, dirs, files in os.walk(folder_pics):
+        if not files ==[]:
+            print("start")
+            files = np.array(files)
+            pattern = r'\.(jpg|jpeg|png)$'
+            r = re.compile(pattern, flags=re.IGNORECASE)
+            vmatch = np.vectorize(lambda x: bool(r.search(x)))
+            images = files[vmatch(files)]
+            print("end")
+            print(images)
+            image_path = [os.path.join(root, image) for image in images]
+            print(image_path)
+            
+            for i in range(len(image_path)):
+                result = model.predict(image_path[i], classes=classes, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf)
+                classes = np.array(classes)
+                results.append([result[0].path])
+                prediction = np.zeros(len(classes))
+                class_counts = np.bincount(result[0].boxes.cls.numpy().astype(int))
+                
+                for class_id, count in enumerate(class_counts):
+                    if count > 0:
+                        class_position = np.where(classes==class_id)[0]
+                        prediction[class_position] = count
+                results[len(results)-1].extend(prediction)
+    
+                #results.append() #Generate the prediction
+                print("Prediction : ", round(((i)*100/len(images)),2),"%")
+    print(results)
+           
+    """ for result in results:
+        for i in range(len(result)):
+            r = result[i]
+            print(r.boxes.cls)
+            #return SaveResults(results)
+        """
+    """
         for file in files:
             # If the image modification date is less than the last classification date, then we have already classified it
-            if already_classify(os.path.join(root, file), get_last_classification_date(classfication_date_file)):
+            if not already_classify(os.path.join(root, file), get_last_classification_date(classfication_date_file)):
                 if (file.endswith(".jpg")) or (file.endswith(".JPG")) or (file.endswith(".png")) or (file.endswith(".PNG")) or (file.endswith(".jpeg")) or (file.endswith(".JPEG")) :# jpg, png or jpeg
                     count+=1
-                    if count%10 == 0:
-                        print(f"{nb_elements-count} more images to classify")
+
+                    print(f"{nb_elements-count} more images to classify")
+                    print(str(conf*10),"/10")
 
                     try:
                         where = os.path.join(root, file)
-                        # image = tf.io.read_file(where)
-                        # image = tf.image.decode_image(image)
-                        # image = tf.image.resize(image, (HEIGHT, WIDTH))
-                        # images = tf.expand_dims(image, axis=0) / 255.0
+
                     except Exception as e:
                         print("A corrupted image was ignored")
-                                
+
                     # Predictions
                     #boxes, scores, classes, valid_detections
-                    dataframe = process_output(model(where, classes=[0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31]),dataframe)
 
+                    dataframe = process_output(model(where, classes=[0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31],conf=conf),dataframe)
+                    print()
 
 
 
@@ -101,10 +140,13 @@ def classification(folder_pics, nb_elements, HEIGHT, WIDTH, model, classfication
                     # for i, j in zip(results[0].boxes.cls, results[0].boxes.conf):
                     #     if j > 0:
                     #         res.append([CLASSES[int(i)],j,where])
-    dataframe.dropna(how='all', inplace=True)
-    dataframe.fillna(0, inplace=True)
-    dataframe.reset_index(names='photo', inplace=True)
-    return dataframe
+    print("5",type(dataframe))
+    if type(dataframe!=None):
+        #dataframe.dropna(how='all', inplace=True)
+        dataframe.fillna(0, inplace=True)
+        dataframe.reset_index(names='photo', inplace=True)
+    return dataframe"""
+    return True
 
 # Used to round off dates
 def arrondir_date(dt, periode, tz):
@@ -307,7 +349,7 @@ def download_files_and_classify_from_FTP(ftp, config, directory, FTP_DIRECTORY, 
                         directory_path = f"{os.getcwd()}/{directory.split('/')[2]}/{directory.split('/')[3]}"
                     except Exception as e:
                         directory_path = f"{os.getcwd()}/{directory.split('/')[2]}"
-                        
+
                     if not os.path.exists(directory_path):
                         os.makedirs(directory_path)
                     local_filename = os.path.join(directory_path, image)
@@ -322,6 +364,7 @@ def download_files_and_classify_from_FTP(ftp, config, directory, FTP_DIRECTORY, 
                     download_files_and_classify_from_FTP(ftp, config, sub_directory, FTP_DIRECTORY, HEIGHT, WIDTH, model, CLASSES, local_folder, output_folder, classfication_date_file)
                     os.chdir(local_folder) # Return to the main local directory
             # If the directory is different than FTP_DIRECTORY and equal to the level one sub-directory of FTP_DIRECTORY we process
+            print("328")
             if (directory != FTP_DIRECTORY) and (directory == f"{FTP_DIRECTORY}/{directory.split('/')[2]}"):
                 current_local_dir = os.path.join(os.getcwd(), directory.split('/')[2])
                 os.chdir(current_local_dir)
@@ -343,14 +386,13 @@ def download_files_and_classify_from_FTP(ftp, config, directory, FTP_DIRECTORY, 
             print("Download error, restart")
 
 # Main function
-def main():
+def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=960, extention="csv"):
 #########
 ## FTP ##
 #########
 
     # Read config file
     try:
-        config_file_path = 'config.json'
         config = read_config(config_file_path)
     except FileNotFoundError:
         print("Couldn't find config.json file in this folder")
@@ -367,7 +409,7 @@ def main():
 
         # Establish FTP connection and upload files
         try:
-            ftp = FTP(FTP_HOST, timeout=5000) #socket.gaierror 
+            ftp = FTP(FTP_HOST, timeout=5000) #socket.gaierror
             ftp.login(FTP_USER, FTP_PASS) #implicit call to connect() #ftplib.error_perm
             ftp.cwd(FTP_DIRECTORY) #ftplib.error_perm
         except Exception as e:
@@ -387,19 +429,37 @@ def main():
     output_folder = config['output_folder']
 
     # Folder with the model
-    folder_model = config['model_file']
+    path_model = config['model_file']
+    folder_model,name_model =os.path.split(path_model)
+    
+    # Verify the authenticity of the files
+    if local_folder=="":
+        raise Exception("local_folder (image folder) should not be empty")
+    if not os.path.exists(local_folder):
+        raise Exception("local_folder path does not exist")
+        
+    if output_folder=="":
+        raise Exception("output_folder should not be empty")
+    if not os.path.exists(output_folder):
+        raise Exception("output_folder path does not exist")
+        
+    if path_model=="":
+        raise Exception("model_file should not be empty")
+    if folder_model=="":
+        raise Exception("In model_file, a path is waiting. ex: \"model_file\": \"D:\\\\Folders\\\\my_model.pt")
+    if not os.path.exists(folder_model):
+        raise Exception("folder_model path does not exist")
+    if name_model=="":
+        raise Exception("In model_file, a file name is waiting. ex: \"model_file\": \"D:\\\\Folders\\\\my_model.pt")
+    print("In model_file, a path is waiting. ex: \"model_file\": \"D:\\\\Folders\\\\my_model.pt")
 
     # Threshold for classification
     try:
         thresh = float(config['treshold'])
     except Exception as e:
-        print("Error reading value for treshold from config file. Set to basic value, 0,75.")
-        thresh = 0.75
+        print("Error reading value for treshold from config file. Set to basic value, "+ str(thresh)+".")
 
-    HEIGHT, WIDTH = (640, 960)
-
-    model = YOLO(folder_model)
-    #model.load_weights(f'{folder_model}')
+    model = YOLO(name_model)
 
 ###############
 ## run model ##
@@ -408,35 +468,34 @@ def main():
     start = timeit.default_timer()
     classfication_date_file = os.path.join(os.getcwd(), "last_classification_date.txt")
     if Use_FTP:
-        download_files_and_classify_from_FTP(ftp, config, FTP_DIRECTORY, FTP_DIRECTORY, HEIGHT, WIDTH, model, local_folder, output_folder, classfication_date_file)
+        download_files_and_classify_from_FTP(ftp, config, FTP_DIRECTORY, FTP_DIRECTORY, img_height, img_width, model, local_folder, output_folder, classfication_date_file)
         ftp.quit()
     else:
         # We browse our local directory and run classification once for each subfolder
-        for root, dirs, files in os.walk(local_folder):
-            for dir in dirs:
+        #for root, dirs, files in os.walk(local_folder):
+            #for dir_name in dirs:
                 # Classification on level 1 subdirectories only
-                if root == local_folder:
-                    current_path_dir = os.path.join(root, dir)
-                    nb_elements = number_of_files(current_path_dir)
-                    dataframe = classification(current_path_dir, nb_elements, HEIGHT, WIDTH, model, classfication_date_file)
-                    timestr = time.strftime("%Y%m%d%H%M%S000")  # unique name based on date.time
-                    if config['output_format'] == "dat":
-                        dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.dat', index=True)
-                    else:  # default case CSV
-                        dataframe.to_csv(f'{output_folder}/{dir}_{timestr}.csv', index=True)
-                    # Avoid to create empty output files
-                    #if dataframe!=[]:
-                        #dataframe_metadonnees = pd.DataFrame(load_metadata(current_path_dir))
-                        #dataframe = processing_output(config, dataframe_metadonnees, res)
-                        #dataframe = process_output(res)
-                        # Export to output format
-
-
+                #if root == local_folder:
+                    #current_path_dir = os.path.join(root, dir_name)
+                    #nb_elements = number_of_files(current_path_dir)
+        
+        # ,current_path_dir
+        dataframe = classification(local_folder,  model, classfication_date_file,conf=thresh) #nb_elements,
+    """ 
+        timestr = time.strftime("%Y%m%d%H%M%S000")  # unique name based on date.time
+            
+        if not config['output_format']=="":
+            extention = config['output_format']
+        if extention.startswith('.'):
+            extention = extention[1:]
+            
+        dataframe.to_csv(f'{output_folder}/{timestr}.'+extention, index=True)
 
     # We save the classification date
     set_last_classification_date(classfication_date_file, datetime.now())
 
     stop = timeit.default_timer()
-    print('Computing time: ', stop - start) # get an idea of computing time
+    print('Computing time: ', str(round(stop - start,3)),"ms.") # get an idea of computing time
+    """
 
 main()
