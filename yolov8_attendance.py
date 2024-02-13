@@ -18,6 +18,7 @@ from ftplib import FTP
 from ultralytics import YOLO
 import numpy as np
 import re
+import csv
 
 
 ###############
@@ -70,7 +71,10 @@ def IsImage(path):
 # Used to classify the images
 # Images formats available :  .bmp .dng .jpeg .jpg .mpo .png .tif .tiff .webp .pfm
 def classification(folder_pics,model, classfication_date_file,classes=[0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31],conf=0.75,batch=50,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
-    results = []
+    names = model.names
+    header = ["img_name"] 
+    header.extend([names[classe] for classe in classes])
+    results = [header]
     
     for root, dirs, files in os.walk(folder_pics):
         if not files ==[]:
@@ -100,53 +104,8 @@ def classification(folder_pics,model, classfication_date_file,classes=[0, 1, 2, 
     
                 #results.append() #Generate the prediction
                 print("Prediction : ", round(((i)*100/len(images)),2),"%")
-    print(results)
-           
-    """ for result in results:
-        for i in range(len(result)):
-            r = result[i]
-            print(r.boxes.cls)
-            #return SaveResults(results)
-        """
-    """
-        for file in files:
-            # If the image modification date is less than the last classification date, then we have already classified it
-            if not already_classify(os.path.join(root, file), get_last_classification_date(classfication_date_file)):
-                if (file.endswith(".jpg")) or (file.endswith(".JPG")) or (file.endswith(".png")) or (file.endswith(".PNG")) or (file.endswith(".jpeg")) or (file.endswith(".JPEG")) :# jpg, png or jpeg
-                    count+=1
-
-                    print(f"{nb_elements-count} more images to classify")
-                    print(str(conf*10),"/10")
-
-                    try:
-                        where = os.path.join(root, file)
-
-                    except Exception as e:
-                        print("A corrupted image was ignored")
-
-                    # Predictions
-                    #boxes, scores, classes, valid_detections
-
-                    dataframe = process_output(model(where, classes=[0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31],conf=conf),dataframe)
-                    print()
-
-
-
-                    # print("Results : ", results)
-                    # print("Classes : ", classes)
-                    # print("Scores : ", scores)
-
-                    #Save results
-                    # for i, j in zip(results[0].boxes.cls, results[0].boxes.conf):
-                    #     if j > 0:
-                    #         res.append([CLASSES[int(i)],j,where])
-    print("5",type(dataframe))
-    if type(dataframe!=None):
-        #dataframe.dropna(how='all', inplace=True)
-        dataframe.fillna(0, inplace=True)
-        dataframe.reset_index(names='photo', inplace=True)
-    return dataframe"""
-    return True
+    print(model.names)
+    return results
 
 # Used to round off dates
 def arrondir_date(dt, periode, tz):
@@ -384,6 +343,15 @@ def download_files_and_classify_from_FTP(ftp, config, directory, FTP_DIRECTORY, 
             break
         except Exception as e:
             print("Download error, restart")
+            
+def CreateUnicCsv(filename):
+    base_name, extension = os.path.splitext(filename)
+    counter = 0
+    while os.path.exists(filename):
+        counter += 1
+        filename = f"{base_name}_{counter}{extension}"
+    print(f"Le fichier CSV '{filename}' a été créé avec succès.")
+    return filename
 
 # Main function
 def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=960, extention="csv"):
@@ -480,7 +448,11 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
                     #nb_elements = number_of_files(current_path_dir)
         
         # ,current_path_dir
-        dataframe = classification(local_folder,  model, classfication_date_file,conf=thresh) #nb_elements,
+        results = classification(local_folder,  model, classfication_date_file,conf=thresh) #nb_elements,
+        filename = CreateUnicCsv('D:\Folders\Code\Python\yolov8-attendance\output\prediction.csv')
+        with open(filename, mode='w+', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerows(results)
     """ 
         timestr = time.strftime("%Y%m%d%H%M%S000")  # unique name based on date.time
             
