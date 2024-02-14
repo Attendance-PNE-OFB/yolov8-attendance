@@ -19,6 +19,8 @@ from ultralytics import YOLO
 import numpy as np
 import re
 import csv
+from functions import IsImage
+from DataManagment import CreateUnicCsv
 
 
 ###############
@@ -65,46 +67,38 @@ def number_of_files(folder):
         nb_elements += len(files)
     return nb_elements
 
-def IsImage(path):
-    return path.endswith(".jpg") or path.endswith(".png") or path.endswith(".jpeg") or path.endswith(".JPG") or path.endswith(".PNG") or path.endswith(".JPEG")
-
 # Used to classify the images
 # Images formats available :  .bmp .dng .jpeg .jpg .mpo .png .tif .tiff .webp .pfm
 def classification(folder_pics,model, classfication_date_file,classes=[0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31],conf=0.75,batch=50,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
-    names = model.names
-    header = ["img_name"] 
-    header.extend([names[classe] for classe in classes])
-    results = [header]
+    header = ["img_name"]                                               # Init the header
+    header.extend([model.names[classe] for classe in classes])          # Fill the header with the class names
+    results = [header]                                                  # Init the list of the results
     
-    for root, dirs, files in os.walk(folder_pics):
-        if not files ==[]:
-            print("start")
-            files = np.array(files)
-            pattern = r'\.(jpg|jpeg|png)$'
-            r = re.compile(pattern, flags=re.IGNORECASE)
-            vmatch = np.vectorize(lambda x: bool(r.search(x)))
-            images = files[vmatch(files)]
-            print("end")
-            print(images)
-            image_path = [os.path.join(root, image) for image in images]
-            print(image_path)
+    for root, dirs, files in os.walk(folder_pics):                      # For each files and fiels in folders
+        if not files ==[]:                                              # If we have files
+            files = np.array(files)                                     # Convert it in numpy array
+            pattern = r'\.(jpg|jpeg|png)$'                              # Pattern to check if it's an image
+            r = re.compile(pattern, flags=re.IGNORECASE)                # Create the recognition function of images
+            vmatch = np.vectorize(lambda x: bool(r.search(x)))          # Create the recognition of a list of item if image by a boolean
+            images = files[vmatch(files)]                               # Keep only the ones that are images
+            images_path = [os.path.join(root, image) for image in images]# Get the complete path for each images
             
-            for i in range(len(image_path)):
-                result = model.predict(image_path[i], classes=classes, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf)
-                classes = np.array(classes)
-                results.append([result[0].path])
-                prediction = np.zeros(len(classes))
-                class_counts = np.bincount(result[0].boxes.cls.numpy().astype(int))
-                
-                for class_id, count in enumerate(class_counts):
-                    if count > 0:
-                        class_position = np.where(classes==class_id)[0]
-                        prediction[class_position] = count
-                results[len(results)-1].extend(prediction)
-    
-                #results.append() #Generate the prediction
-                print("Prediction : ", round(((i)*100/len(images)),2),"%")
-    print(model.names)
+            for i in range(len(images_path)):           # For each images
+                image_path = images_path[i]             # Simplify the call
+                if not already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
+                    result = model.predict(image_path, classes=classes, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf) # Predict this image
+                    classes = np.array(classes)         # Trandform classes as a numpy array
+                    results.append([result[0].path])    # First line is the image path
+                    prediction = np.zeros(len(classes)) # Array of the results
+                    class_counts = np.bincount(result[0].boxes.cls.numpy().astype(int)) # Count the number of each class found
+                    
+                    for class_id, count in enumerate(class_counts):         # For each classes get the class number and the number of times
+                        if count > 0:                                       # If we have count
+                            class_position = np.where(classes==class_id)[0] # Get the Index of this class in our array
+                            prediction[class_position] = count              # Add the count to our array
+                    results[len(results)-1].extend(prediction)              # Add the array to our result
+        
+                    print("Prediction : ", round(((i)*100/len(images)),2),"%") # Process position bar
     return results
 
 # Used to round off dates
@@ -344,14 +338,7 @@ def download_files_and_classify_from_FTP(ftp, config, directory, FTP_DIRECTORY, 
         except Exception as e:
             print("Download error, restart")
             
-def CreateUnicCsv(filename):
-    base_name, extension = os.path.splitext(filename)
-    counter = 0
-    while os.path.exists(filename):
-        counter += 1
-        filename = f"{base_name}_{counter}{extension}"
-    print(f"Le fichier CSV '{filename}' a été créé avec succès.")
-    return filename
+
 
 # Main function
 def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=960, extention="csv"):
@@ -439,35 +426,22 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
         download_files_and_classify_from_FTP(ftp, config, FTP_DIRECTORY, FTP_DIRECTORY, img_height, img_width, model, local_folder, output_folder, classfication_date_file)
         ftp.quit()
     else:
-        # We browse our local directory and run classification once for each subfolder
-        #for root, dirs, files in os.walk(local_folder):
-            #for dir_name in dirs:
-                # Classification on level 1 subdirectories only
-                #if root == local_folder:
-                    #current_path_dir = os.path.join(root, dir_name)
-                    #nb_elements = number_of_files(current_path_dir)
-        
-        # ,current_path_dir
-        results = classification(local_folder,  model, classfication_date_file,conf=thresh) #nb_elements,
-        filename = CreateUnicCsv('D:\Folders\Code\Python\yolov8-attendance\output\prediction.csv')
-        with open(filename, mode='w+', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerows(results)
-    """ 
-        timestr = time.strftime("%Y%m%d%H%M%S000")  # unique name based on date.time
-            
         if not config['output_format']=="":
             extention = config['output_format']
         if extention.startswith('.'):
             extention = extention[1:]
             
-        dataframe.to_csv(f'{output_folder}/{timestr}.'+extention, index=True)
+        results = classification(local_folder,  model, classfication_date_file,conf=thresh) #nb_elements,
+        filename = CreateUnicCsv("D:\\Folders\\Code\\Python\\yolov8-attendance\output\\" +os.path.basename(os.path.normpath(local_folder))+"."+extention)
+        with open(filename, mode='w+', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerows(results)
 
     # We save the classification date
     set_last_classification_date(classfication_date_file, datetime.now())
 
     stop = timeit.default_timer()
     print('Computing time: ', str(round(stop - start,3)),"ms.") # get an idea of computing time
-    """
+    
 
 main()
