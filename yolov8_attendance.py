@@ -20,7 +20,9 @@ import numpy as np
 import re
 import csv
 from functions import IsImage
-from DataManagment import CreateUnicCsv
+from DataManagment import CreateUnicCsv, PathLeaf, SaveResults
+from extractMetadata import extract_metadata
+from Directions import GetDirection
 
 
 ###############
@@ -33,6 +35,7 @@ def read_config(file_path):
         config_data = json.load(config_file)
     return config_data
 
+"""
 # Used to read metadata of all images
 def load_metadata(folder_pics):
     # Data storage list
@@ -59,6 +62,7 @@ def load_metadata(folder_pics):
                 except (AttributeError, KeyError, IndexError, UnidentifiedImageError):
                     pass
     return data
+"""
 
 # Used to inform user of the number of images to classify
 def number_of_files(folder):
@@ -67,11 +71,75 @@ def number_of_files(folder):
         nb_elements += len(files)
     return nb_elements
 
+def GetResultatsNormal(results_array,classes,result_model):
+    classes = np.array(classes)         # Trandform classes as a numpy array
+    prediction = np.zeros(len(classes)) # Array of the results
+    class_counts = np.bincount(result_model[0].boxes.cls.numpy().astype(int)) # Count the number of each class found
+    
+    for class_id, count in enumerate(class_counts):         # For each classes get the class number and the number of times
+        if count > 0:                                       # If we have count
+            class_position = np.where(classes==class_id)[0] # Get the Index of this class in our array
+            prediction[class_position] = count              # Add the count to our array
+    results_array[len(results_array)-1].extend(prediction)              # Add the array to our result
+    return results_array
+
+def GetResultatsPose(results_array,result_pose,positions_head):
+    positions = np.zeros(len(positions_head))
+    positions_head_np = np.array(positions_head)
+    left = np.where(positions_head_np=="left")[0]
+    right = np.where(positions_head_np=="right")[0]
+    up = np.where(positions_head_np=="up")[0]
+    down = np.where(positions_head_np=="down")[0]
+    vertical = np.where(positions_head_np=="vertical")[0]
+    
+    if len(left)<=0 or len(right)<=0 or len(up)<=0 or len(down)<=0 or len(vertical)<=0:
+        raise Exception("One of the position indice as not been found")
+    
+    for liste in result_pose[1:]: #For each predictions
+        for i in range(1, len(liste)):  # For each predicitons predicted
+            liste[i] = float(liste[i])  # Converte the str in float
+        image_path = liste[0]
+        image_name = PathLeaf(liste[0])
+
+        result = liste[1:]                 # all the skeletons points
+        directions = GetDirection(result)   # Get the directions
+        
+
+        if directions[left]> directions[right]:    # If majority of left
+            positions[left] = positions[left]+1
+        elif directions[right]> directions[left]:  # If majority of right
+            positions[right] = positions[right]+1
+        elif directions[up]>directions[down] and directions[up]+directions[vertical]>directions[left]:   # If majority of up without superior left or right
+            positions[up] = positions[up]+1
+        elif directions[up]<directions[down] and directions[down]+directions[vertical]>directions[left]:   # If majority of up without superior left or right
+            positions[down] = positions[down]+1
+        elif directions[vertical]>0: # If it have verticality without predefine direction
+            positions[vertical] = positions[vertical]+1
+        else: # else displau the directions that we have
+            # checker ca au dessus
+            indices = []
+            for k in range(len(directions)):# For all the directions
+                direction = directions[k]
+                if direction!=0:
+                    indices.append(k)
+            
+            if len(indices)<=0:
+                print("A direction of someone as not been found")
+            else : 
+                rate = round(1/len(indices),2)
+                for k in indices:
+                    positions[k] = positions[k]+rate
+    results_array[len(results_array)-1].extend(positions)
+    return results_array
+
 # Used to classify the images
 # Images formats available :  .bmp .dng .jpeg .jpg .mpo .png .tif .tiff .webp .pfm
-def classification(folder_pics,model, classfication_date_file,classes=[0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31],conf=0.4,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
+def classification(folder_pics,model,model_pose, classfication_date_file,classes=[0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31],conf=0.4,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
     header = ["img_name"]                                               # Init the header
     header.extend([model.names[classe] for classe in classes])          # Fill the header with the class names
+    # Class of the predictions
+    positions_head = ["left","right","up","down","vertical"]
+    header.extend(positions_head)
     results = [header]                                                  # Init the list of the results
     
     for root, dirs, files in os.walk(folder_pics):                      # For each files and fiels in folders
@@ -87,16 +155,11 @@ def classification(folder_pics,model, classfication_date_file,classes=[0, 1, 2, 
                 image_path = images_path[i]             # Simplify the call
                 if already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
                     result = model.predict(image_path, classes=classes, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf) # Predict this image
-                    classes = np.array(classes)         # Trandform classes as a numpy array
-                    results.append([result[0].path])    # First line is the image path
-                    prediction = np.zeros(len(classes)) # Array of the results
-                    class_counts = np.bincount(result[0].boxes.cls.numpy().astype(int)) # Count the number of each class found
+                    result_pose = SaveResults(model_pose.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf))
                     
-                    for class_id, count in enumerate(class_counts):         # For each classes get the class number and the number of times
-                        if count > 0:                                       # If we have count
-                            class_position = np.where(classes==class_id)[0] # Get the Index of this class in our array
-                            prediction[class_position] = count              # Add the count to our array
-                    results[len(results)-1].extend(prediction)              # Add the array to our result
+                    results.append([result[0].path])    # First line is the image path
+                    results = GetResultatsNormal(results,classes,result)
+                    results = GetResultatsPose(results,result_pose,positions_head)
         
                     print("Prediction : ", round(((i)*100/len(images)),2),"%") # Process position bar
     return results
@@ -121,7 +184,7 @@ def arrondir_date_year(dt, tz):
     return date.isoformat()
 
 # Used to transform the output csv of the classification model into a more usable csv
-
+"""
 def process_output(result, dataframe=None):
     if(dataframe is None):
         dataframe = pd.DataFrame(columns=[result[0].names[cle] for cle in [0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31]])
@@ -135,6 +198,7 @@ def process_output(result, dataframe=None):
             dataframe.loc[image_name, result[0].names[cls.item()]] += 1
 
     return dataframe
+"""
 
 def processing_output(config, dataframe_metadonnees, res):
     tz = pytz.timezone("Europe/Paris")
@@ -323,7 +387,7 @@ def download_files_and_classify_from_FTP(ftp, config, directory, FTP_DIRECTORY, 
                 os.chdir(current_local_dir)
                 nb_elements = number_of_files(current_local_dir)
                 res = classification(current_local_dir, nb_elements, HEIGHT, WIDTH, model, CLASSES, classfication_date_file)
-                dataframe_metadonnees = pd.DataFrame(load_metadata(current_local_dir))
+                dataframe_metadonnees = pd.DataFrame(extract_metadata(current_local_dir))
                 dataframe = processing_output(config, dataframe_metadonnees, res)
                 # Export
                 timestr = time.strftime("%Y%m%d%H%M%S000") # unique name based on date.time
@@ -386,6 +450,8 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
     # Folder with the model
     model_name = config['model_name']
     
+    model_name_pose = config['model_name_pose']
+    
     # Verify the authenticity of the files
     if local_folder=="":
         raise Exception("local_folder (image folder) should not be empty")
@@ -399,6 +465,8 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
         
     if model_name=="":
         raise Exception("model_name should not be empty")
+    if model_name_pose=="":
+        raise Exception("model_name_pose should not be empty")
 
 
     # Threshold for classification
@@ -408,6 +476,7 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
         print("Error reading value for treshold from config file. Set to basic value, "+ str(thresh)+".")
 
     model = YOLO(model_name) # Get the model
+    model_pose = YOLO(model_name_pose)
 
 ###############
 ## run model ##
@@ -425,8 +494,8 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
         if extention.startswith('.'): # If a point before, delete it
             extention = extention[1:]
             
-        results = classification(local_folder,  model, classfication_date_file,conf=thresh) # Make the prediction
-        filename = CreateUnicCsv("D:\\Folders\\Code\\Python\\yolov8-attendance\output\\" +os.path.basename(os.path.normpath(local_folder))+"."+extention) # Create an unic file
+        results = classification(local_folder,  model, model_pose, classfication_date_file,conf=thresh) # Make the prediction
+        filename = CreateUnicCsv(".\\output\\" +os.path.basename(os.path.normpath(local_folder))+"."+extention) # Create an unic file
         
         # Save our results
         with open(filename, mode='w+', newline='') as file:
