@@ -69,7 +69,7 @@ def number_of_files(folder):
 
 # Used to classify the images
 # Images formats available :  .bmp .dng .jpeg .jpg .mpo .png .tif .tiff .webp .pfm
-def classification(folder_pics,model, classfication_date_file,classes=[0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31],conf=0.75,batch=50,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
+def classification(folder_pics,model, classfication_date_file,classes=[0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31],conf=0.4,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
     header = ["img_name"]                                               # Init the header
     header.extend([model.names[classe] for classe in classes])          # Fill the header with the class names
     results = [header]                                                  # Init the list of the results
@@ -85,7 +85,7 @@ def classification(folder_pics,model, classfication_date_file,classes=[0, 1, 2, 
             
             for i in range(len(images_path)):           # For each images
                 image_path = images_path[i]             # Simplify the call
-                if not already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
+                if already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
                     result = model.predict(image_path, classes=classes, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf) # Predict this image
                     classes = np.array(classes)         # Trandform classes as a numpy array
                     results.append([result[0].path])    # First line is the image path
@@ -384,8 +384,7 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
     output_folder = config['output_folder']
 
     # Folder with the model
-    path_model = config['model_file']
-    folder_model,name_model =os.path.split(path_model)
+    model_name = config['model_name']
     
     # Verify the authenticity of the files
     if local_folder=="":
@@ -398,15 +397,9 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
     if not os.path.exists(output_folder):
         raise Exception("output_folder path does not exist")
         
-    if path_model=="":
-        raise Exception("model_file should not be empty")
-    if folder_model=="":
-        raise Exception("In model_file, a path is waiting. ex: \"model_file\": \"D:\\\\Folders\\\\my_model.pt")
-    if not os.path.exists(folder_model):
-        raise Exception("folder_model path does not exist")
-    if name_model=="":
-        raise Exception("In model_file, a file name is waiting. ex: \"model_file\": \"D:\\\\Folders\\\\my_model.pt")
-    print("In model_file, a path is waiting. ex: \"model_file\": \"D:\\\\Folders\\\\my_model.pt")
+    if model_name=="":
+        raise Exception("model_name should not be empty")
+
 
     # Threshold for classification
     try:
@@ -414,25 +407,28 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
     except Exception as e:
         print("Error reading value for treshold from config file. Set to basic value, "+ str(thresh)+".")
 
-    model = YOLO(name_model)
+    model = YOLO(model_name) # Get the model
 
 ###############
 ## run model ##
 ###############
 
-    start = timeit.default_timer()
+    start = timeit.default_timer() # Start the time timer
     classfication_date_file = os.path.join(os.getcwd(), "last_classification_date.txt")
     if Use_FTP:
         download_files_and_classify_from_FTP(ftp, config, FTP_DIRECTORY, FTP_DIRECTORY, img_height, img_width, model, local_folder, output_folder, classfication_date_file)
         ftp.quit()
     else:
+        # Get our extention
         if not config['output_format']=="":
             extention = config['output_format']
-        if extention.startswith('.'):
+        if extention.startswith('.'): # If a point before, delete it
             extention = extention[1:]
             
-        results = classification(local_folder,  model, classfication_date_file,conf=thresh) #nb_elements,
-        filename = CreateUnicCsv("D:\\Folders\\Code\\Python\\yolov8-attendance\output\\" +os.path.basename(os.path.normpath(local_folder))+"."+extention)
+        results = classification(local_folder,  model, classfication_date_file,conf=thresh) # Make the prediction
+        filename = CreateUnicCsv("D:\\Folders\\Code\\Python\\yolov8-attendance\output\\" +os.path.basename(os.path.normpath(local_folder))+"."+extention) # Create an unic file
+        
+        # Save our results
         with open(filename, mode='w+', newline='') as file:
             writer = csv.writer(file)
             writer.writerows(results)
