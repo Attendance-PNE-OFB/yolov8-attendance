@@ -35,35 +35,6 @@ def read_config(file_path):
         config_data = json.load(config_file)
     return config_data
 
-"""
-# Used to read metadata of all images
-def load_metadata(folder_pics):
-    # Data storage list
-    data = []
-
-    for root, dirs, files in os.walk(folder_pics):
-        for file_name in files:
-            file_path = os.path.join(root, file_name)
-            # The extension can be jpg, png or JPEG
-            if file_name.endswith(('.jpg', '.JPG', '.png', '.PNG', '.jpeg', '.JPEG')):
-                try:
-                    image = Image.open(file_path)
-                    exif_data = image._getexif()
-                    if exif_data is not None:
-                        for tag, value in exif_data.items():
-                            tag_name = TAGS.get(tag, tag)
-                            if tag_name == 'DateTimeOriginal':
-                                metadata = {
-                                    'DateTimeOriginal': datetime.strptime(value, '%Y:%m:%d %H:%M:%S'),
-                                    'photo': file_path
-                                }
-                                # Adding metadata to the list
-                                data.append(metadata)
-                except (AttributeError, KeyError, IndexError, UnidentifiedImageError):
-                    pass
-    return data
-"""
-
 # Used to inform user of the number of images to classify
 def number_of_files(folder):
     nb_elements = 0
@@ -86,6 +57,7 @@ def GetResultatsNormal(results_array,classes,result_model):
 def GetResultatsPose(results_array,result_pose,positions_head):
     positions = np.zeros(len(positions_head))
     positions_head_np = np.array(positions_head)
+    person = np.where(positions_head_np=="person")[0]
     left = np.where(positions_head_np=="left")[0]
     right = np.where(positions_head_np=="right")[0]
     up = np.where(positions_head_np=="up")[0]
@@ -93,8 +65,9 @@ def GetResultatsPose(results_array,result_pose,positions_head):
     vertical = np.where(positions_head_np=="vertical")[0]
     
     if len(left)<=0 or len(right)<=0 or len(up)<=0 or len(down)<=0 or len(vertical)<=0:
-        raise Exception("One of the position indice as not been found")
+        raise Exception("One of the position indice as not been found ")
     
+    positions[person]=len(result_pose[1:])
     for liste in result_pose[1:]: #For each predictions
         for i in range(1, len(liste)):  # For each predicitons predicted
             liste[i] = float(liste[i])  # Converte the str in float
@@ -105,15 +78,15 @@ def GetResultatsPose(results_array,result_pose,positions_head):
         directions = GetDirection(result)   # Get the directions
         
 
-        if directions[left]> directions[right]:    # If majority of left
+        if directions[left-1]> directions[right-1]:    # If majority of left
             positions[left] = positions[left]+1
-        elif directions[right]> directions[left]:  # If majority of right
+        elif directions[right-1]> directions[left-1]:  # If majority of right
             positions[right] = positions[right]+1
-        elif directions[up]>directions[down] and directions[up]+directions[vertical]>directions[left]:   # If majority of up without superior left or right
+        elif directions[up-1]>directions[down-1] and directions[up-1]+directions[vertical-1]>directions[left-1]:   # If majority of up without superior left or right
             positions[up] = positions[up]+1
-        elif directions[up]<directions[down] and directions[down]+directions[vertical]>directions[left]:   # If majority of up without superior left or right
+        elif directions[up-1]<directions[down-1] and directions[down-1]+directions[vertical-1]>directions[left-1]:   # If majority of up without superior left or right
             positions[down] = positions[down]+1
-        elif directions[vertical]>0: # If it have verticality without predefine direction
+        elif directions[vertical-1]>0: # If it have verticality without predefine direction
             positions[vertical] = positions[vertical]+1
         else: # else displau the directions that we have
             # checker ca au dessus
@@ -128,7 +101,7 @@ def GetResultatsPose(results_array,result_pose,positions_head):
             else : 
                 rate = round(1/len(indices),2)
                 for k in indices:
-                    positions[k] = positions[k]+rate
+                    positions[k+1] = positions[k+1]+rate
     results_array[len(results_array)-1].extend(positions)
     return results_array
 
@@ -136,9 +109,9 @@ def GetResultatsPose(results_array,result_pose,positions_head):
 # Images formats available :  .bmp .dng .jpeg .jpg .mpo .png .tif .tiff .webp .pfm
 def classification(folder_pics,model,model_pose, classfication_date_file,classes=[0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31],conf=0.4,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
     header = ["img_name"]                                               # Init the header
-    header.extend([model.names[classe] for classe in classes])          # Fill the header with the class names
+    #header.extend([model.names[classe] for classe in classes])          # Fill the header with the class names
     # Class of the predictions
-    positions_head = ["left","right","up","down","vertical"]
+    positions_head = ["person","left","right","up","down","vertical"]
     header.extend(positions_head)
     results = [header]                                                  # Init the list of the results
     
@@ -154,11 +127,11 @@ def classification(folder_pics,model,model_pose, classfication_date_file,classes
             for i in range(len(images_path)):           # For each images
                 image_path = images_path[i]             # Simplify the call
                 if already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
-                    result = model.predict(image_path, classes=classes, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf) # Predict this image
+                    #result = model.predict(image_path, classes=classes, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf) # Predict this image
                     result_pose = SaveResults(model_pose.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf))
                     
-                    results.append([result[0].path])    # First line is the image path
-                    results = GetResultatsNormal(results,classes,result)
+                    results.append([image_path])    # First line is the image path
+                    #results = GetResultatsNormal(results,classes,result)
                     results = GetResultatsPose(results,result_pose,positions_head)
         
                     print("Prediction : ", round(((i)*100/len(images)),2),"%") # Process position bar
@@ -182,23 +155,6 @@ def arrondir_date_year(dt, tz):
     date = pd.Timestamp(dt.year, 1, 1).normalize()
     date = tz.localize(date)
     return date.isoformat()
-
-# Used to transform the output csv of the classification model into a more usable csv
-"""
-def process_output(result, dataframe=None):
-    if(dataframe is None):
-        dataframe = pd.DataFrame(columns=[result[0].names[cle] for cle in [0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31]])
-    image_name = result[0].path.split('/')[-1]
-    dataframe = pd.concat([dataframe, pd.Series(index=[image_name])])
-
-    for cls in result[0].boxes.cls:
-        if pd.isna(dataframe.loc[image_name, result[0].names[cls.item()]]):
-            dataframe.loc[image_name, result[0].names[cls.item()]] = 1
-        else:
-            dataframe.loc[image_name, result[0].names[cls.item()]] += 1
-
-    return dataframe
-"""
 
 def processing_output(config, dataframe_metadonnees, res):
     tz = pytz.timezone("Europe/Paris")
