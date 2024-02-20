@@ -13,6 +13,7 @@ import validators
 import numpy as np
 import requests
 
+
 """
 True if the path is an image, false otherwise
 """

@@ -105,16 +105,69 @@ def GetResultatsPose(results_array,result_pose,positions_head):
     results_array[len(results_array)-1].extend(positions)
     return results_array
 
+def ApplyFunctions(dic,class_counts):
+    func_key, func_val = next(iter(dic.items())) # get the function
+    if isinstance(func_val, (dict)):
+        if func_key == "max":
+            return max([ApplyFunctions(value,class_counts) if isinstance(value, (dict)) else class_counts[int(key)] for key, value in func_val.items()])
+        elif func_key == "min":
+            return min([ApplyFunctions(value,class_counts) if isinstance(value, (dict)) else class_counts[int(key)] for key, value in func_val.items()])
+        elif func_key == "sum":
+            return sum([ApplyFunctions(value,class_counts) if isinstance(value, (dict)) else class_counts[int(key)] for key, value in func_val.items()])
+        else:
+            raise Exception("Unknow function ",func_key)  
+    if func_key.isdigit():
+        return class_counts[int(func_key)]
+    else:
+        raise Exception("Invalid instance of ", str(func_val), " : ",type(func_val))
+
+def GetResultatsGoogle(results,result_google,names, classes_path,classes_exception_path):
+    class_counts = np.bincount(result_google[0].boxes.cls.numpy().astype(int))  # count the number of each detected class
+    class_counts = np.concatenate([class_counts, np.zeros(max(0, len(names) - len(class_counts)))])
+    header = results[0] # get the header of the classes
+
+    # get the jsons
+    with open(classes_path, "r") as file:
+        classes_json = json.load(file)
+    
+    with open(classes_exception_path, "r") as file:
+        classes_exeptions_json = json.load(file)
+    
+    current_row = results[len(results)-1]               # the row at update
+    print("before : ",current_row)
+    current_row.extend(np.zeros(max(0, len(classes_json.items()) - len(current_row))))     # fill it with 0
+        
+    for key, value in classes_json.items():             # for each json elements
+        if key !="_comment":
+            if isinstance(value, (dict)): #list
+                #print("A dic : " , key," ",value," ",len(header), " ",len(current_row))
+                current_row[header.index(key)] = ApplyFunctions(value,class_counts)
+            elif isinstance(value, (str)):
+                current_row[header.index(value)] = class_counts[int(key)]
+            else:
+                raise Exception("Invalid instance of ", str(value), " : ",type(value))
+                #explore_json(value)
+    print("after : ",current_row)           
+    return results
+
 # Used to classify the images
-# Images formats available :  .bmp .dng .jpeg .jpg .mpo .png .tif .tiff .webp .pfm
-def classification(folder_pics,model,model_pose, classfication_date_file,classes=[0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31],conf=0.4,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
+# Images formats available :  .bmp .dng .jpeg .jpg .mpo .png .tif .tiff .webp .pfm classes=[0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31],
+def classification(folder_pics,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=0.3,conf_google=0.2,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
     header = ["img_name"]                                               # Init the header
     #header.extend([model.names[classe] for classe in classes])          # Fill the header with the class names
     # Class of the predictions
     positions_head = ["person","left","right","up","down","vertical"]
+    
+    
+    with open(classes_path, "r") as file:
+        classes_json = json.load(file)
+        
+    # for class_id, count in class_counts
+    google_names = model_google.names
+    header.extend([google_names[int(key)] if key.isdigit() else key for key, value in classes_json.items() if "_comment" not in key])    # Fill the header with the class names
     header.extend(positions_head)
     results = [header]                                                  # Init the list of the results
-    
+
     for root, dirs, files in os.walk(folder_pics):                      # For each files and fiels in folders
         if not files ==[]:                                              # If we have files
             files = np.array(files)                                     # Convert it in numpy array
@@ -128,10 +181,12 @@ def classification(folder_pics,model,model_pose, classfication_date_file,classes
                 image_path = images_path[i]             # Simplify the call
                 if already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
                     #result = model.predict(image_path, classes=classes, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf) # Predict this image
-                    result_pose = SaveResults(model_pose.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf))
+                    result_google = model_google.predict(image_path, save=True, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_google)
+                    result_pose = SaveResults(model_pose.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose))
                     
                     results.append([image_path])    # First line is the image path
-                    #results = GetResultatsNormal(results,classes,result)
+                    #results = GetResultatsNormal(results,classes,result,)
+                    results = GetResultatsGoogle(results,result_google,google_names, classes_path,classes_exception_path)
                     results = GetResultatsPose(results,result_pose,positions_head)
         
                     print("Prediction : ", round(((i)*100/len(images)),2),"%") # Process position bar
@@ -404,9 +459,15 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
     output_folder = config['output_folder']
 
     # Folder with the model
-    model_name = config['model_name']
-    
+    model_name = config['model_name']   
     model_name_pose = config['model_name_pose']
+    model_name_google = config['model_name_google']
+    
+    thresh_pose = config['treshold_pose']
+    thresh_google = config['treshold_google']
+    
+    classes_path = config['classes_path']
+    classes_exception_path = config['classes_exception_path']
     
     # Verify the authenticity of the files
     if local_folder=="":
@@ -419,19 +480,40 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
     if not os.path.exists(output_folder):
         raise Exception("output_folder path does not exist")
         
+    if classes_exception_path=="":
+        raise Exception("classes_exception_path should not be empty")
+    if not os.path.exists(classes_exception_path):
+        raise Exception("classes_exception_path path does not exist")
+        
+    if classes_path=="":
+        raise Exception("classes_path should not be empty")
+    if not os.path.exists(classes_path):
+        raise Exception("classes_path path does not exist")
+        
     if model_name=="":
         raise Exception("model_name should not be empty")
+    if model_name_google=="":
+        raise Exception("model_name_google should not be empty")
     if model_name_pose=="":
         raise Exception("model_name_pose should not be empty")
-
-
-    # Threshold for classification
+    if "pose" not in model_name_pose:
+        raise Exception("This is not a pose model. The model name must contain 'pose'.")
+    if "oiv7" not in model_name_google:
+        raise Exception("This is not a google model. The model name must contain 'oiv7'.")
+        
     try:
-        thresh = float(config['treshold'])
+        thresh_pose = float(thresh_pose)
     except Exception as e:
-        print("Error reading value for treshold from config file. Set to basic value, "+ str(thresh)+".")
+        print("Error reading value for treshold pose from config file. Must be a float. Set to basic value, "+ str(thresh)+".")
+        
+    try:
+        thresh_google = float(thresh_google)
+    except Exception as e:
+        print("Error reading value for treshold google from config file. Must be a float. Set to basic value, "+ str(thresh)+".")
+
 
     model = YOLO(model_name) # Get the model
+    model_google = YOLO(model_name_google)
     model_pose = YOLO(model_name_pose)
 
 ###############
@@ -450,7 +532,7 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
         if extention.startswith('.'): # If a point before, delete it
             extention = extention[1:]
             
-        results = classification(local_folder,  model, model_pose, classfication_date_file,conf=thresh) # Make the prediction
+        results = classification(local_folder,  model_google, model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=thresh_pose, conf_google = thresh_google) # Make the prediction
         filename = CreateUnicCsv(".\\output\\" +os.path.basename(os.path.normpath(local_folder))+"."+extention) # Create an unic file
         
         # Save our results
