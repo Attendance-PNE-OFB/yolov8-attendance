@@ -120,16 +120,16 @@ def ExceptionCountItem(count,label,json, maxe):
         raise Exception("Wrong format should be a symbole following by numbers")
         
     if symbole == "/":
-        res = (count / int(number)) 
+        res = round(count / int(number)) 
         return  res if res<maxe else maxe
     elif symbole =="*":
-        res = (count * int(number))
+        res = round(count * int(number))
         return res if res<maxe else maxe
     elif symbole == "-":
-        res = (count - int(number))
+        res = round(count - int(number))
         return res if res<maxe else maxe
     elif symbole == "+":
-        res = (count + int(number))
+        res = round(count + int(number))
         return res if res<maxe else maxe
     else :
         raise Exception("Symbole not handle")
@@ -138,11 +138,6 @@ def ApplyFunctions(dic,class_counts,json,nb_peoples):
     func_key, func_val = next(iter(dic.items())) # get the function
     if isinstance(func_val, (dict)):
         if func_key == "max":
-            for key, value in func_val.items():
-                print(value)
-                if value == "Hiking equipment":
-                    print(value in json.items())
-                    print(value in json)
             return max([ApplyFunctions(value,class_counts,json,nb_peoples) if isinstance(value, (dict)) else ExceptionCountItem(class_counts[int(key)],value,json,nb_peoples) for key, value in func_val.items()])
         elif func_key == "min":
             return min([ApplyFunctions(value,class_counts,json,nb_peoples) if isinstance(value, (dict)) else ExceptionCountItem(class_counts[int(key)],value,json,nb_peoples) for key, value in func_val.items()])
@@ -157,7 +152,7 @@ def ApplyFunctions(dic,class_counts,json,nb_peoples):
 
 def GetResultatsGoogle(results,result_google,names, classes_path,classes_exception_path):
     class_counts = np.bincount(result_google[0].boxes.cls.numpy().astype(int))  # count the number of each detected class
-    class_counts = np.concatenate([class_counts, np.zeros(max(0, len(names) - len(class_counts)))])
+    class_counts = np.concatenate([class_counts, np.zeros(max(0, len(names) - len(class_counts)))]) # Init the classes at 0
     header = results[0] # get the header of the classes
 
     # get the jsons
@@ -168,40 +163,33 @@ def GetResultatsGoogle(results,result_google,names, classes_path,classes_excepti
         classes_exeptions_json = json.load(file)
     
     current_row = results[len(results)-1]               # the row at update
-    print("before : ",current_row)
     current_row.extend(np.zeros(max(0, len(classes_json.items())-1)))     # fill it with 0. -1 because of _comment
-    nb_peoples =  current_row[header.index("person")]
+    nb_peoples =  current_row[header.index("person")] # get the number of peoples detect
     
     for key, value in classes_json.items():             # for each json elements
         if key !="_comment":
             if isinstance(value, (dict)): #list
-                #print("A dic : " , key," ",value," ",len(header), " ",len(current_row))
                 current_row[header.index(key)] = ApplyFunctions(value,class_counts,classes_exeptions_json,nb_peoples)
             elif isinstance(value, (str)):
                 current_row[header.index(value)] = ExceptionCountItem(class_counts[int(key)],value,classes_exeptions_json,nb_peoples)
             else:
-                raise Exception("Invalid instance of ", str(value), " : ",type(value))
-                #explore_json(value)
-    print("after : ",current_row)           
+                raise Exception("Invalid instance of ", str(value), " : ",type(value))        
     return results
 
 # Used to classify the images
-# Images formats available :  .bmp .dng .jpeg .jpg .mpo .png .tif .tiff .webp .pfm classes=[0, 1, 2, 3, 5, 16, 17, 18, 24, 26, 30, 31],
 def classification(folder_pics,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=0.3,conf_google=0.2,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
-    header = ["img_name"]                                               # Init the header
-    #header.extend([model.names[classe] for classe in classes])          # Fill the header with the class names
-    # Class of the predictions
-    positions_head = ["person","left","right","up","down","vertical"]
+    header = ["img_name"]      # Init the header
+    positions_head = ["person","left","right","up","down","vertical"] # classes direction
     
-    
+    # get the classification classes (google)
     with open(classes_path, "r") as file:
         classes_json = json.load(file)
         
-    # for class_id, count in class_counts
-    google_names = model_google.names
+    google_names = model_google.names # get the google classes names
+    
+    # create our output header
     header.extend(positions_head)
     header.extend([google_names[int(key)] if key.isdigit() else key for key, value in classes_json.items() if "_comment" not in key])    # Fill the header with the class names
-    
     results = [header]                                                  # Init the list of the results
 
     for root, dirs, files in os.walk(folder_pics):                      # For each files and fiels in folders
@@ -216,16 +204,12 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
             for i in range(len(images_path)):           # For each images
                 image_path = images_path[i]             # Simplify the call
                 if already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
-                    #result = model.predict(image_path, classes=classes, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf) # Predict this image
                     result_google = model_google.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_google)
                     result_pose = SaveResults(model_pose.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose))
                     
                     results.append([image_path])    # First line is the image path
-                    #results = GetResultatsNormal(results,classes,result,)
                     results = GetResultatsPose(results,result_pose,positions_head)
                     results = GetResultatsGoogle(results,result_google,google_names, classes_path,classes_exception_path)
-                    
-        
                     print("Prediction : ", round(((i)*100/len(images)),2),"%") # Process position bar
     return results
 
@@ -496,7 +480,6 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
     output_folder = config['output_folder']
 
     # Folder with the model
-    model_name = config['model_name']   
     model_name_pose = config['model_name_pose']
     model_name_google = config['model_name_google']
     
@@ -527,8 +510,6 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
     if not os.path.exists(classes_path):
         raise Exception("classes_path path does not exist")
         
-    if model_name=="":
-        raise Exception("model_name should not be empty")
     if model_name_google=="":
         raise Exception("model_name_google should not be empty")
     if model_name_pose=="":
@@ -549,7 +530,6 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
         print("Error reading value for treshold google from config file. Must be a float. Set to basic value, "+ str(thresh)+".")
 
 
-    model = YOLO(model_name) # Get the model
     model_google = YOLO(model_name_google)
     model_pose = YOLO(model_name_pose)
 
@@ -560,7 +540,7 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
     start = timeit.default_timer() # Start the time timer
     classfication_date_file = os.path.join(os.getcwd(), "last_classification_date.txt")
     if Use_FTP:
-        download_files_and_classify_from_FTP(ftp, config, FTP_DIRECTORY, FTP_DIRECTORY, img_height, img_width, model, local_folder, output_folder, classfication_date_file)
+        download_files_and_classify_from_FTP(ftp, config, FTP_DIRECTORY, FTP_DIRECTORY, img_height, img_width, model_google, local_folder, output_folder, classfication_date_file)
         ftp.quit()
     else:
         # Get our extention
