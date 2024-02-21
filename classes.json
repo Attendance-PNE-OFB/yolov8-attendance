@@ -62,13 +62,13 @@
     "255": "Horse",
     "452": "Sheep",
     "160": "Dog",
-    "Man": {
+    "Male": {
     	"sum":{
     		"63": "Boy",
         	"322": "Man"
     	}
     },
-    "Woman": {
+    "Female": {
     	"sum":{
     		"216": "Girl",
         	"594": "Woman"
