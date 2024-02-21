@@ -1,0 +1,7 @@
+{
+	"_comment":"You can add elements to the lists. 'contain' look if the caracters are present in the class name. Is look if it's exactly the same. You can add groups of divisions : /3, /4, etc if need.",
+	"wheel":"/2",
+	"High heels":"/2",
+	"Crutch":"/2",
+	"equipment":"/3"
+}

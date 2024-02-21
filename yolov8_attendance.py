@@ -105,19 +105,53 @@ def GetResultatsPose(results_array,result_pose,positions_head):
     results_array[len(results_array)-1].extend(positions)
     return results_array
 
-def ApplyFunctions(dic,class_counts):
+def ExceptionCountItem(count,label,json, maxe):
+    method = ""
+    for key, value in json.items():
+        if key in label:
+            method = value
+            
+    if method =="":
+        return count
+    symbole = method[0]
+    number = method[1:]
+    
+    if not number.isdigit():
+        raise Exception("Wrong format should be a symbole following by numbers")
+        
+    if symbole == "/":
+        res = (count / int(number)) 
+        return  res if res<maxe else maxe
+    elif symbole =="*":
+        res = (count * int(number))
+        return res if res<maxe else maxe
+    elif symbole == "-":
+        res = (count - int(number))
+        return res if res<maxe else maxe
+    elif symbole == "+":
+        res = (count + int(number))
+        return res if res<maxe else maxe
+    else :
+        raise Exception("Symbole not handle")
+
+def ApplyFunctions(dic,class_counts,json,nb_peoples):
     func_key, func_val = next(iter(dic.items())) # get the function
     if isinstance(func_val, (dict)):
         if func_key == "max":
-            return max([ApplyFunctions(value,class_counts) if isinstance(value, (dict)) else class_counts[int(key)] for key, value in func_val.items()])
+            for key, value in func_val.items():
+                print(value)
+                if value == "Hiking equipment":
+                    print(value in json.items())
+                    print(value in json)
+            return max([ApplyFunctions(value,class_counts,json,nb_peoples) if isinstance(value, (dict)) else ExceptionCountItem(class_counts[int(key)],value,json,nb_peoples) for key, value in func_val.items()])
         elif func_key == "min":
-            return min([ApplyFunctions(value,class_counts) if isinstance(value, (dict)) else class_counts[int(key)] for key, value in func_val.items()])
+            return min([ApplyFunctions(value,class_counts,json,nb_peoples) if isinstance(value, (dict)) else ExceptionCountItem(class_counts[int(key)],value,json,nb_peoples) for key, value in func_val.items()])
         elif func_key == "sum":
-            return sum([ApplyFunctions(value,class_counts) if isinstance(value, (dict)) else class_counts[int(key)] for key, value in func_val.items()])
+            return sum([ApplyFunctions(value,class_counts,json,nb_peoples) if isinstance(value, (dict)) else  ExceptionCountItem(class_counts[int(key)],value,json,nb_peoples) for key, value in func_val.items()])
         else:
             raise Exception("Unknow function ",func_key)  
     if func_key.isdigit():
-        return class_counts[int(func_key)]
+        return ExceptionCountItem(class_counts[int(func_key)],func_val,json,nb_peoples)
     else:
         raise Exception("Invalid instance of ", str(func_val), " : ",type(func_val))
 
@@ -135,15 +169,16 @@ def GetResultatsGoogle(results,result_google,names, classes_path,classes_excepti
     
     current_row = results[len(results)-1]               # the row at update
     print("before : ",current_row)
-    current_row.extend(np.zeros(max(0, len(classes_json.items()) - len(current_row))))     # fill it with 0
-        
+    current_row.extend(np.zeros(max(0, len(classes_json.items())-1)))     # fill it with 0. -1 because of _comment
+    nb_peoples =  current_row[header.index("person")]
+    
     for key, value in classes_json.items():             # for each json elements
         if key !="_comment":
             if isinstance(value, (dict)): #list
                 #print("A dic : " , key," ",value," ",len(header), " ",len(current_row))
-                current_row[header.index(key)] = ApplyFunctions(value,class_counts)
+                current_row[header.index(key)] = ApplyFunctions(value,class_counts,classes_exeptions_json,nb_peoples)
             elif isinstance(value, (str)):
-                current_row[header.index(value)] = class_counts[int(key)]
+                current_row[header.index(value)] = ExceptionCountItem(class_counts[int(key)],value,classes_exeptions_json,nb_peoples)
             else:
                 raise Exception("Invalid instance of ", str(value), " : ",type(value))
                 #explore_json(value)
@@ -164,8 +199,9 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
         
     # for class_id, count in class_counts
     google_names = model_google.names
-    header.extend([google_names[int(key)] if key.isdigit() else key for key, value in classes_json.items() if "_comment" not in key])    # Fill the header with the class names
     header.extend(positions_head)
+    header.extend([google_names[int(key)] if key.isdigit() else key for key, value in classes_json.items() if "_comment" not in key])    # Fill the header with the class names
+    
     results = [header]                                                  # Init the list of the results
 
     for root, dirs, files in os.walk(folder_pics):                      # For each files and fiels in folders
@@ -181,13 +217,14 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
                 image_path = images_path[i]             # Simplify the call
                 if already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
                     #result = model.predict(image_path, classes=classes, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf) # Predict this image
-                    result_google = model_google.predict(image_path, save=True, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_google)
+                    result_google = model_google.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_google)
                     result_pose = SaveResults(model_pose.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose))
                     
                     results.append([image_path])    # First line is the image path
                     #results = GetResultatsNormal(results,classes,result,)
-                    results = GetResultatsGoogle(results,result_google,google_names, classes_path,classes_exception_path)
                     results = GetResultatsPose(results,result_pose,positions_head)
+                    results = GetResultatsGoogle(results,result_google,google_names, classes_path,classes_exception_path)
+                    
         
                     print("Prediction : ", round(((i)*100/len(images)),2),"%") # Process position bar
     return results
