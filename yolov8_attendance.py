@@ -13,7 +13,7 @@ import pandas as pd
 from PIL import UnidentifiedImageError, Image
 from PIL.ExifTags import TAGS
 
-from ftplib import FTP
+from ftplib import FTP_TLS
 
 from ultralytics import YOLO
 import numpy as np
@@ -433,6 +433,7 @@ def download_files_and_classify_from_FTP(ftp, config, directory, FTP_DIRECTORY, 
             break
         except Exception as e:
             print("Download error, restart")
+            raise
             
 
 
@@ -460,8 +461,10 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
 
         # Establish FTP connection and upload files
         try:
-            ftp = FTP(FTP_HOST, timeout=5000) #socket.gaierror
+            ftp = FTP_TLS(timeout=5000) #socket.gaierror
+            ftp.connect(FTP_HOST, 3921, timeout=5000)
             ftp.login(FTP_USER, FTP_PASS) #implicit call to connect() #ftplib.error_perm
+            ftp.prot_p() #Activer la protection des données
             ftp.cwd(FTP_DIRECTORY) #ftplib.error_perm
         except Exception as e:
             print("Error when connecting to FTP server. Check your server, login and FTP directory")
@@ -540,7 +543,7 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
     start = timeit.default_timer() # Start the time timer
     classfication_date_file = os.path.join(os.getcwd(), "last_classification_date.txt")
     if Use_FTP:
-        download_files_and_classify_from_FTP(ftp, config, FTP_DIRECTORY, FTP_DIRECTORY, img_height, img_width, model_google, local_folder, output_folder, classfication_date_file)
+        download_files_and_classify_from_FTP(ftp, config, FTP_DIRECTORY, FTP_DIRECTORY, img_height, img_width, model_google, classes_path, local_folder, output_folder, classfication_date_file)
         ftp.quit()
     else:
         # Get our extention
