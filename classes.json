@@ -130,14 +130,11 @@
     	}
     },
     "Vehicle": {
-    	"max":{
-    		"sum":{
-    			"90": "Car",
-		        "302": "Land vehicle",
-		        "558": "Truck",
-		        "567": "Vehicle"
-    		},    		
-	        "582": "Wheel"
+    	"sum":{
+    		"90": "Car",
+	        "302": "Land vehicle",
+	        "558": "Truck",
+	        "567": "Vehicle"
     	}
     },
     "OutOfLaw": {
