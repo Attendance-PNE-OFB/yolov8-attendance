@@ -19,8 +19,12 @@ def extract_metadata(file_path):
     type_pattern = [r'^rando.*', r'^trail.*', r'^vtt.*', r'^ski.*', r'^snowboard', r'^trek.*']
 
     result = {}  # dictionnaire regroupant les noms des images, avec leurs informations sous forme de dictionnaire
-
-    with exiftool.ExifTool() as et:
+    
+    path = None
+    if os.name == 'nt':
+        path = os.path.join("C:/Users/esto5/anaconda3/envs/s101/Lib/site-packages/exiftool/exiftool.exe")
+        
+    with exiftool.ExifTool(path) as et:
         # Obtention des métadonnées de toutes les images du dossier séléctionné
         extensions = ["jpg", "jpeg", "png"]
         metadata = et.execute_json("-json", "-r", "-ext", *extensions, file_path)

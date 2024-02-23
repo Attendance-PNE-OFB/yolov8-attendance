@@ -13,21 +13,6 @@
     "classes_exception_path":"D:\\Folders\\Code\\Python\\yolov8-attendance\\classes_exeptions_rules.json",
     "sequence_duration": 10,
     "time_step": "Hour",
-    "output_format": "csv",
-    "csv_column": {
-        "date": "date",
-        "backpack": "backpack",
-        "bicycle": "bicycle",
-        "dog": "dog",
-        "person": "person",
-        "handbag": "handbag",
-        "ski": "ski",
-        "snowboard": "snowboard",
-        "car": "car",
-        "motorcycle": "motorcycle",
-        "bus": "bus",
-        "horse": "horse",
-        "sheep": "sheep"
-    }
+    "output_format": "csv"
 }
   
