@@ -155,7 +155,7 @@ def ApplyFunctions(dic,class_counts,json,nb_peoples):
         raise Exception("Invalid instance of ", str(func_val), " : ",type(func_val))
 
 def GetResultatsGoogle(results,result_google,names, classes_path,classes_exception_path):
-    class_counts = np.bincount(result_google[0].boxes.cls.numpy().astype(int))  # count the number of each detected class
+    class_counts = np.bincount(result_google[0].boxes.cls.cpu().numpy().astype(int))  # count the number of each detected class
     class_counts = np.concatenate([class_counts, np.zeros(max(0, len(names) - len(class_counts)))]) # Init the classes at 0
     header = results[0] # get the header of the classes
 
@@ -442,7 +442,7 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
         extention = extention[1:]
             
     results = classification(local_folder,  model_google, model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=thresh_pose, conf_google = thresh_google) # Make the prediction
-    filename = CreateUnicCsv(".\\output\\" +os.path.basename(os.path.normpath(local_folder))+"."+extention) # Create an unic file
+    filename = CreateUnicCsv("output_" +os.path.basename(os.path.normpath(local_folder))+"."+extention) # Create an unic file
         
     # Save our results
     with open(filename, mode='w+', newline='') as file:
