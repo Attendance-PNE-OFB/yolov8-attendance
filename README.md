@@ -76,19 +76,19 @@ python3 yolov8_attendance.py
 N'oubliez pas de créer/modifier votre fichier de config !
 
 ## Classes.json
-Basé sur les 600 labels reconnue par le modèle yolov8 entrainé sur le dataset de google
-Tous les cas sont compté comme 1 élément. Si 3 bike wheel, nous pouvons le compter comme 3 bike car cette élément sera gérer dans classes_exeptions_rules.json
-2 cas :
+Basé sur les 600 labels reconnue par le modèle yolov8 entrainé sur le dataset de google.  
+Tous les cas sont compté comme 1 élément. Si 3 bike wheel, nous pouvons le compter comme 3 bike car cette élément sera gérer dans classes_exeptions_rules.json.  
+2 cas :  
 ### "5": "Alpaca" 
-Représente la position du label dans les 600 de googles avec le nom du label
+Représente la position du label dans les 600 de googles avec le nom du label.  
 ### "Animal":{ 
-Un groupement de labels de google.
-Doit contenir une fonction parmis "max", "min", "sum" qui definie la méthode de comptage
-_Exemple :_ 
-Detection : 1 chien, 2 chats, 3 souris
-max(1 chien, 2 chats, 3 souris) = 3 animaux
-min(1 chien, 2 chats, 3 souris) = 1 animal
-sum(1 chien, 2 chats, 3 souris) = 6 animaux
+Un groupement de labels de google.  
+Doit contenir une fonction parmis "max", "min", "sum" qui definie la méthode de comptage.  
+_Exemple :_  
+Detection : 1 chien, 2 chats, 3 souris  
+max(1 chien, 2 chats, 3 souris) = 3 animaux  
+min(1 chien, 2 chats, 3 souris) = 1 animal  
+sum(1 chien, 2 chats, 3 souris) = 6 animaux  
 
 Ajouter des sous fonctions est possible : 
 ```
@@ -102,11 +102,11 @@ Ajouter des sous fonctions est possible :
 ```
 
 ## classes_exeptions_rules.json
-Permet de gérer les élements qui doivent être compter d'une manière spécifique.
-"wheel":"/2" Permettera de diviser par 2 tous les labels contenant le mot clé wheel.
-_Exemple :_
-3 car wheel, 2 bike wheel, 1 dog
-will give us : 2 car wheel, 1 bike wheel, 1 dog
+Permet de gérer les élements qui doivent être compter d'une manière spécifique.  
+"wheel":"/2" Permettera de diviser par 2 tous les labels contenant le mot clé wheel.  
+_Exemple :_  
+3 car wheel, 2 bike wheel, 1 dog  
+will give us : 2 car wheel, 1 bike wheel, 1 dog  
 
 ## Auteurs
 
