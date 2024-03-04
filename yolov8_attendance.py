@@ -20,7 +20,7 @@ import numpy as np
 import re
 import csv
 from functions import IsImage
-from DataManagment import CreateUnicCsv, PathLeaf, SaveResults
+from DataManagment import CreateUnicCsv, PathLeaf, DefSkelPoints
 from extractMetadata import extract_metadata
 from Directions import GetDirection
 from math import ceil
@@ -172,10 +172,10 @@ def GetResultatsGoogle(results,result_google,names, classes_path,classes_excepti
     
     for key, value in classes_json.items():             # for each json elements
         if key !="_comment":
-            if isinstance(value, (dict)): #list
-                current_row[header.index(key)] = ApplyFunctions(value,class_counts,classes_exeptions_json,nb_peoples)
-            elif isinstance(value, (str)):
-                current_row[header.index(value)] = ExceptionCountItem(class_counts[int(key)],value,classes_exeptions_json,nb_peoples)
+            if isinstance(value, (dict)): # if dictionnary
+                current_row[header.index(key)] = ApplyFunctions(value,class_counts,classes_exeptions_json,nb_peoples) # Handle the dictionnary 
+            elif isinstance(value, (str)): # if a direct label
+                current_row[header.index(value)] = ExceptionCountItem(class_counts[int(key)],value,classes_exeptions_json,nb_peoples) # handle the count and add it
             else:
                 raise Exception("Invalid instance of ", str(value), " : ",type(value))        
     return results
@@ -207,9 +207,9 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
             
             for i in range(len(images_path)):           # For each images
                 image_path = images_path[i]             # Simplify the call
-                if not already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
+                if already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
                     result_google = model_google.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_google)
-                    result_pose = SaveResults(model_pose.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose))
+                    result_pose = DefSkelPoints(model_pose.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose))
                     
                     results.append([image_path])    # First line is the image path
                     results = GetResultatsPose(results,result_pose,positions_head)
@@ -327,7 +327,7 @@ class MyFTP_TLS(FTP_TLS):
         return conn, size
 
 # Main function
-def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=960, extention="csv"):
+def main(config_file_path='config.json', extention="csv"):
 #########
 ## FTP ##
 #########
@@ -359,6 +359,7 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
             raise
     else:
         Use_FTP = False
+    
 
 ###########
 ## model ##
@@ -413,12 +414,12 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
     try:
         thresh_pose = float(thresh_pose)
     except Exception as e:
-        print("Error reading value for treshold pose from config file. Must be a float. Set to basic value, "+ str(thresh)+".")
+        print("Error reading value for treshold pose from config file. Must be a float. Set to basic value, "+ str(thresh_pose)+".")
         
     try:
         thresh_google = float(thresh_google)
     except Exception as e:
-        print("Error reading value for treshold google from config file. Must be a float. Set to basic value, "+ str(thresh)+".")
+        print("Error reading value for treshold google from config file. Must be a float. Set to basic value, "+ str(thresh_google)+".")
 
 
     model_google = YOLO(model_name_google)
@@ -431,7 +432,6 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
     start = timeit.default_timer() # Start the time timer
     classfication_date_file = os.path.join(os.getcwd(), "last_classification_date.txt")
     if Use_FTP:
-        #download_files_and_classify_from_FTP(ftp, config, FTP_DIRECTORY, FTP_DIRECTORY, img_height, img_width,  model_google, model_pose, classes_path, local_folder, output_folder, classfication_date_file, classes_path,classes_exception_path,conf_pose=thresh_pose, conf_google = thresh_google)
         DownloadImagesFTP(ftp,FTP_DIRECTORY,local_folder)
         ftp.quit()
 
@@ -442,7 +442,9 @@ def main(config_file_path='config.json',thresh=0.25,img_height=640, img_width=96
         extention = extention[1:]
             
     results = classification(local_folder,  model_google, model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=thresh_pose, conf_google = thresh_google) # Make the prediction
-    filename = CreateUnicCsv(".\\output\\" +os.path.basename(os.path.normpath(local_folder))+"."+extention) # Create an unic file
+    timestr = time.strftime("%Y_%m_%d_%H_%M_%S")
+    
+    filename = os.path.normpath(output_folder+ "\\" +os.path.basename(local_folder)+"_"+timestr+"."+extention) # Create an unic file
         
     # Save our results
     with open(filename, mode='w+', newline='') as file:
