@@ -60,12 +60,14 @@ def extract_metadata(file_path):
                 elif re.match(direction_g_pattern, j):
                     direction.append(j)
 
-            data['date'] = metadata[i]['EXIF:DateTimeOriginal']
             data['type'] = type
             data['direction'] = direction
             data['genre'] = genre
             data['age'] = cat_age
+
+        data['date'] = metadata[i]['EXIF:DateTimeOriginal']
         result[metadata[i]['SourceFile']] = data
+
     return result
 
 # Fonction pour extraire des métadonnées les activités 

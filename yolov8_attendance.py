@@ -7,7 +7,7 @@ import timeit
 import time
 import torch
 import pytz
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 
@@ -241,10 +241,14 @@ def GetResultatsGoogle(results,result_google,names, classes_path,classes_excepti
     return results
 
 # Used to classify the images
-def classification(folder_pics,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=0.3,conf_google=0.2,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
-    header = ["img_name"]      # Init the header
+def classification(folder_pics,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=0.3,conf_google=0.2,format=True,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
+    if format:   
+        header = ["date"]     # Init the header
+    else:
+        header = ["img_name"] # Init the header
+
     positions_head = ["person","left","right","up","down","vertical"] # classes direction
-    
+
     # get the classification classes (google)
     with open(classes_path, "r") as file:
         classes_json = json.load(file)
@@ -265,13 +269,21 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
             images = files[vmatch(files)]                               # Keep only the ones that are images
             images_path = [os.path.join(root, image) for image in images]# Get the complete path for each images
             
+            if format:
+                metadata = extract_metadata(folder_pics) # Load metadata only if time format for output csv
+
             for i in range(len(images_path)):           # For each images
                 image_path = images_path[i]             # Simplify the call
                 if already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
                     result_google = model_google.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_google)
                     result_pose = DefSkelPoints(model_pose.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose))
                     
-                    results.append([image_path])    # First line is the image path
+                    if format: #True = time format | False = image format
+                        date = datetime.strptime(metadata[image_path]['date'], "%Y:%m:%d %H:%M:%S")
+                        results.append([date]) # Last line is the timestamp of the image
+                    else:
+                        results.append([image_path])    # First line is the image path
+                    
                     results = GetResultatsPose(results,result_pose,positions_head)
                     results = GetResultatsGoogle(results,result_google,google_names, classes_path,classes_exception_path)
                     print("Prediction : ", round(((i)*100/len(images)),2),"%") # Process position bar
@@ -279,9 +291,14 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
 
 # Used to round off dates
 def arrondir_date(dt, periode, tz):
-    reference_date = datetime(2023, 1, 1, 00, 00, 00)
-    date = dt - (dt - reference_date) % periode
+    reference_date = datetime(2023, 1, 1, 0, 0, 0)
+    # Récupérer la période en heures
+    heures_periode = periode.n
+    # Effectuer l'opération modulo avec la période en heures
+    date = dt - (dt - reference_date) % pd.Timedelta(hours=heures_periode)
+    # Convertir la date en heure locale
     date = tz.localize(date)
+    # Renvoyer la date au format ISO
     return date.isoformat()
 
 # Used to round off dates : monthly time step
@@ -295,6 +312,63 @@ def arrondir_date_year(dt, tz):
     date = pd.Timestamp(dt.year, 1, 1).normalize()
     date = tz.localize(date)
     return date.isoformat()
+
+# Used to process output csv
+def gathering_time(res, time_step):
+    time_step = time_step.capitalize()
+    tz = pytz.timezone("Europe/Paris")
+    # Define the desired time step
+    # Creation of a new column with dates rounded according to time step
+    if time_step=='Hour':
+        periode = pd.offsets.Hour()
+        id = res[0].index('date')
+        for i in range(1,len(res)):
+            tmp = res[i]
+            tmp[id] = arrondir_date(tmp[id], periode, tz)
+    elif time_step=='Day':
+        periode = pd.offsets.Day()
+        res[res.index('date')] = res[res.index('date')].apply(lambda dt: arrondir_date(dt, periode, tz))
+    elif time_step=='Month':
+        res[res.index('date')] = res[res.index('date')].apply(lambda dt: arrondir_date_month(dt, tz))
+    elif time_step=='Year':
+        res[res.index('date')] = res[res.index('date')].apply(lambda dt: arrondir_date_year(dt, tz))
+    else: # To avoid a bug, we define the default time step as hour
+        print("Error reading value for time_step from config file. Set to basic value, hour.")
+        periode = pd.offsets.Hour()
+        res[res.index('date')] = res[res.index('date')].apply(lambda dt: arrondir_date(dt, periode, tz))
+
+    res=regroup_rows(res)
+    print(res)
+    return res
+
+# Used to regroup rows of our list
+def regroup_rows(rows):
+    # Dictionary to store the sum of the value of each row
+    sum_values = {}
+    # Index of 'date' column in rows
+    idx = rows[0].index('date')
+    # Pass the header
+    rows_data = rows[1:]
+    
+    # Iterate through each data row
+    for row in rows_data:
+        date = row[idx] # Date
+        if date in sum_values: # Look if index for this date already exist
+            for i in range(len(row)):
+                if i!=idx: # Sum all the other values
+                    sum_values[date][i] = int(sum_values[date][i]) + int(row[i])
+        else :
+            sum_values[date] = row # Give the entire row
+
+    # Change the format of the date
+    res = sorted(sum_values.values())
+    for row in res:
+        row[idx] = datetime.fromisoformat(row[idx]).strftime("%Y/%m/%d %H:%M:%S")
+
+    # Get final array
+    rows[1:] = res
+
+    return rows
 
 
 # Used to delete all files from a folder
@@ -501,7 +575,13 @@ def main(config_file_path='config.json', extention="csv"):
     if extention.startswith('.'): # If a point before, delete it
         extention = extention[1:]
             
-    results = classification(local_folder,  model_google, model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=thresh_pose, conf_google = thresh_google) # Make the prediction
+    if config['image_or_time_csv']=="image":
+        results = classification(local_folder,  model_google, model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=thresh_pose, conf_google = thresh_google, format=False) # Make the prediction
+    elif config['image_or_time_csv']=="time":
+        results = classification(local_folder,  model_google, model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=thresh_pose, conf_google = thresh_google, format=True) # Make the prediction
+        results = gathering_time(results, config['time_step'])
+    else:
+        raise Exception("Couldn't read properly image_or_time_csv. The image_or_time_csv must contain 'image' or 'time.")
 
     timestr = time.strftime("%Y-%m-%d %H-%M-%S")
     filename = os.path.normpath(os.path.join(output_folder,os.path.basename(local_folder)+"_"+timestr+"."+extention))
