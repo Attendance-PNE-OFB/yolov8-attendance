@@ -91,6 +91,7 @@ min(1 chien, 2 chats, 3 souris) = 1 animal
 sum(1 chien, 2 chats, 3 souris) = 6 animaux
 
 Ajouter des sous fonctions est possible : 
+```
 "max":{
   "sum":{
     "42": "...",
@@ -98,6 +99,7 @@ Ajouter des sous fonctions est possible :
   },
   "44": "..."
 }
+```
 
 ## classes_exeptions_rules.json
 Permet de gérer les élements qui doivent être compter d'une manière spécifique.
