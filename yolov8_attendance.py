@@ -155,7 +155,10 @@ def ApplyFunctions(dic,class_counts,json,nb_peoples):
         raise Exception("Invalid instance of ", str(func_val), " : ",type(func_val))
 
 def GetResultatsGoogle(results,result_google,names, classes_path,classes_exception_path):
-    class_counts = np.bincount(result_google[0].boxes.cls.numpy().astype(int))  # count the number of each detected class
+    if result_google[0].boxes.cls.device.type == 'cpu':
+        class_counts = np.bincount(result_google[0].boxes.cls.cpu().numpy().astype(int))  # count the number of each detected class
+    else:
+        class_counts = np.bincount(result_google[0].boxes.cls.numpy().astype(int))
     class_counts = np.concatenate([class_counts, np.zeros(max(0, len(names) - len(class_counts)))]) # Init the classes at 0
     header = results[0] # get the header of the classes
 
@@ -442,8 +445,8 @@ def main(config_file_path='config.json', extention="csv"):
         extention = extention[1:]
             
     results = classification(local_folder,  model_google, model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=thresh_pose, conf_google = thresh_google) # Make the prediction
+
     timestr = time.strftime("%Y_%m_%d_%H_%M_%S")
-    
     filename = os.path.normpath(output_folder+ "\\" +os.path.basename(local_folder)+"_"+timestr+"."+extention) # Create an unic file
         
     # Save our results
