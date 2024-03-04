@@ -110,6 +110,30 @@ def GetResultatsPose(results_array,result_pose,positions_head):
     results_array[len(results_array)-1].extend(positions)
     return results_array
 
+"""
+    Count items based on a specified method provided in a JSON dictionary.
+
+    Args:
+    - count (int): The initial count of items.
+    - label (list): List of labels to match against the keys in the JSON dictionary.
+    - json (dict): JSON dictionary containing methods for counting items.
+    - maxe (int): Maximum count limit.
+
+    Returns:
+    - int: Count of items after applying the specified method.
+
+    Raises:
+    - Exception: If the method format is incorrect or contains an unsupported symbol.
+
+    Example:
+    json = {
+        "method1": "*2",
+        "method2": "/3",
+        "method3": "+5"
+    }
+    count = ExceptionCountItem(10, ["method1", "method2"], json, 20)
+    # Returns 20, because (10 * 2) exceeds the maximum count limit of 20.
+    """
 def ExceptionCountItem(count,label,json, maxe):
     method = ""
     for key, value in json.items():
@@ -138,7 +162,39 @@ def ExceptionCountItem(count,label,json, maxe):
         return res if res<maxe else maxe
     else :
         raise Exception("Symbole not handle")
+"""
+    Apply specified functions to count items based on the given dictionary.
 
+    Args:
+    - dic (dict): Dictionary containing functions to be applied.
+    - class_counts (list): List containing counts of each class.
+    - json (dict): JSON dictionary containing methods for counting items.
+    - nb_peoples (int): Number of people in the scenario.
+
+    Returns:
+    - int: Count of items after applying the specified functions.
+
+    Raises:
+    - Exception: If the function key is unknown or if the instance is invalid.
+
+    Example:
+    class_counts = [10, 20, 30, 40, 50]
+    json = {
+        "1": "+5",
+        "2": "*2",
+        "3": "/3"
+    }
+    dic = {
+        "sum": {
+            "max": {
+                "1": "+2",
+                "3": "*3"
+            }
+        }
+    }
+    result = ApplyFunctions(dic, class_counts, json, 100)
+    # Returns 36 after applying the functions.
+    """
 def ApplyFunctions(dic,class_counts,json,nb_peoples):
     func_key, func_val = next(iter(dic.items())) # get the function
     if isinstance(func_val, (dict)):
