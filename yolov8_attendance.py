@@ -504,7 +504,7 @@ def main(config_file_path='config.json', extention="csv"):
     results = classification(local_folder,  model_google, model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=thresh_pose, conf_google = thresh_google) # Make the prediction
 
     timestr = time.strftime("%Y_%m_%d_%H_%M_%S")
-    filename = os.path.normpath(output_folder+ "\\" +os.path.basename(local_folder)+"_"+timestr+"."+extention) # Create an unic file
+    filename = os.path.normpath(os.path.join(output_folder,os.path.basename(local_folder)+"_"+timestr+"."+extention))
         
     # Save our results
     with open(filename, mode='w+', newline='') as file:
