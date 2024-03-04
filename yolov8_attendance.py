@@ -5,6 +5,7 @@ import os
 import json
 import timeit
 import time
+import torch
 import pytz
 from datetime import datetime
 
@@ -155,7 +156,7 @@ def ApplyFunctions(dic,class_counts,json,nb_peoples):
         raise Exception("Invalid instance of ", str(func_val), " : ",type(func_val))
 
 def GetResultatsGoogle(results,result_google,names, classes_path,classes_exception_path):
-    if result_google[0].boxes.cls.device.type == 'cpu':
+    if torch.cuda.is_available():
         class_counts = np.bincount(result_google[0].boxes.cls.cpu().numpy().astype(int))  # count the number of each detected class
     else:
         class_counts = np.bincount(result_google[0].boxes.cls.numpy().astype(int))
