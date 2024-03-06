@@ -293,7 +293,7 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
 
             for i in range(len(images_path)):           # For each images
                 image_path = images_path[i]             # Simplify the call
-                if already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
+                if not already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
                     result_google = model_google.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_google)
                     result_pose = DefSkelPoints(model_pose.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose))
                     
