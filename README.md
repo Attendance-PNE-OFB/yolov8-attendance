@@ -30,11 +30,11 @@ Il vous faut créer votre version du fichier de configuration.
 
 Linux & Mac :
 ```
-cp config_sample.json config_json
+cp config_sample.json config.json
 ```
 Windows :
 ```
-copy config_sample.json config_json
+copy config_sample.json config.json
 ```
 
 #### Description des paramètres de configuration
