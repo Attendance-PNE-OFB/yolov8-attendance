@@ -65,7 +65,12 @@ def extract_metadata(file_path):
             data['genre'] = genre
             data['age'] = cat_age
 
-        data['date'] = metadata[i]['EXIF:DateTimeOriginal']
+        #print(data['date'])
+        try:
+            data['date'] = metadata[i]['EXIF:DateTimeOriginal']
+        except:
+            data['date'] = '1900:01:01 00:00:00'
+
         result[metadata[i]['SourceFile']] = data
 
     return result

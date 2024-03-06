@@ -7,12 +7,9 @@ import timeit
 import time
 import torch
 import pytz
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pandas as pd
-
-from PIL import UnidentifiedImageError, Image
-from PIL.ExifTags import TAGS
 
 from ftplib import FTP_TLS, FTP
 
@@ -21,12 +18,10 @@ import numpy as np
 import re
 import csv
 from functions import IsImage
-from DataManagment import CreateUnicCsv, PathLeaf, DefSkelPoints
+from DataManagment import DefSkelPoints
 from extractMetadata import extract_metadata
 from Directions import GetDirection
 from math import ceil
-
-
 
 
 ###############
@@ -45,70 +40,6 @@ def number_of_files(folder):
     for root, dirs, files in os.walk(folder):
         nb_elements += len(files)
     return nb_elements
-
-# For yolov8 coco
-def GetResultatsNormal(results_array,classes,result_model):
-    classes = np.array(classes)         # Trandform classes as a numpy array
-    prediction = np.zeros(len(classes)) # Array of the results
-    class_counts = np.bincount(result_model[0].boxes.cls.numpy().astype(int)) # Count the number of each class found
-    
-    for class_id, count in enumerate(class_counts):         # For each classes get the class number and the number of times
-        if count > 0:                                       # If we have count
-            class_position = np.where(classes==class_id)[0] # Get the Index of this class in our array
-            prediction[class_position] = count              # Add the count to our array
-    results_array[len(results_array)-1].extend(prediction)              # Add the array to our result
-    return results_array
-
-def GetResultatsPose(results_array,result_pose,positions_head):
-    positions = np.zeros(len(positions_head))
-    positions_head_np = np.array(positions_head)
-    person = np.where(positions_head_np=="person")[0]
-    left = np.where(positions_head_np=="left")[0]
-    right = np.where(positions_head_np=="right")[0]
-    up = np.where(positions_head_np=="up")[0]
-    down = np.where(positions_head_np=="down")[0]
-    vertical = np.where(positions_head_np=="vertical")[0]
-    
-    if len(left)<=0 or len(right)<=0 or len(up)<=0 or len(down)<=0 or len(vertical)<=0:
-        raise Exception("One of the position indice as not been found ")
-    
-    positions[person]=len(result_pose[1:])
-    for liste in result_pose[1:]: #For each predictions
-        for i in range(1, len(liste)):  # For each predicitons predicted
-            liste[i] = float(liste[i])  # Converte the str in float
-        image_path = liste[0]
-        image_name = PathLeaf(liste[0])
-
-        result = liste[1:]                 # all the skeletons points
-        directions = GetDirection(result)   # Get the directions
-        
-
-        if directions[left-1]> directions[right-1]:    # If majority of left
-            positions[left] = positions[left]+1
-        elif directions[right-1]> directions[left-1]:  # If majority of right
-            positions[right] = positions[right]+1
-        elif directions[up-1]>directions[down-1] and directions[up-1]+directions[vertical-1]>directions[left-1]:   # If majority of up without superior left or right
-            positions[up] = positions[up]+1
-        elif directions[up-1]<directions[down-1] and directions[down-1]+directions[vertical-1]>directions[left-1]:   # If majority of up without superior left or right
-            positions[down] = positions[down]+1
-        elif directions[vertical-1]>0: # If it have verticality without predefine direction
-            positions[vertical] = positions[vertical]+1
-        else: # else displau the directions that we have
-            # checker ca au dessus
-            indices = []
-            for k in range(len(directions)):# For all the directions
-                direction = directions[k]
-                if direction!=0:
-                    indices.append(k)
-            
-            if len(indices)<=0:
-                print("A direction of someone as not been found")
-            else : 
-                rate = round(1/len(indices),2)
-                for k in indices:
-                    positions[k+1] = positions[k+1]+rate
-    results_array[len(results_array)-1].extend(positions)
-    return results_array
 
 """
     Count items based on a specified method provided in a JSON dictionary.
@@ -133,7 +64,7 @@ def GetResultatsPose(results_array,result_pose,positions_head):
     }
     count = ExceptionCountItem(10, ["method1", "method2"], json, 20)
     # Returns 20, because (10 * 2) exceeds the maximum count limit of 20.
-    """
+"""
 def ExceptionCountItem(count,label,json, maxe):
     method = ""
     for key, value in json.items():
@@ -162,6 +93,7 @@ def ExceptionCountItem(count,label,json, maxe):
         return res if res<maxe else maxe
     else :
         raise Exception("Symbole not handle")
+
 """
     Apply specified functions to count items based on the given dictionary.
 
@@ -194,7 +126,7 @@ def ExceptionCountItem(count,label,json, maxe):
     }
     result = ApplyFunctions(dic, class_counts, json, 100)
     # Returns 36 after applying the functions.
-    """
+"""
 def ApplyFunctions(dic,class_counts,json,nb_peoples):
     func_key, func_val = next(iter(dic.items())) # get the function
     if isinstance(func_val, (dict)):
@@ -211,6 +143,7 @@ def ApplyFunctions(dic,class_counts,json,nb_peoples):
     else:
         raise Exception("Invalid instance of ", str(func_val), " : ",type(func_val))
 
+# For yolov8 OIV7
 def GetResultatsGoogle(results,result_google,names, classes_path,classes_exception_path):
     if torch.cuda.is_available():
         class_counts = np.bincount(result_google[0].boxes.cls.cpu().numpy().astype(int))  # count the number of each detected class
@@ -239,6 +172,67 @@ def GetResultatsGoogle(results,result_google,names, classes_path,classes_excepti
             else:
                 raise Exception("Invalid instance of ", str(value), " : ",type(value))        
     return results
+
+# For yolov8 coco
+def GetResultatsNormal(results_array,classes,result_model):
+    classes = np.array(classes)         # Trandform classes as a numpy array
+    prediction = np.zeros(len(classes)) # Array of the results
+    class_counts = np.bincount(result_model[0].boxes.cls.numpy().astype(int)) # Count the number of each class found
+    
+    for class_id, count in enumerate(class_counts):         # For each classes get the class number and the number of times
+        if count > 0:                                       # If we have count
+            class_position = np.where(classes==class_id)[0] # Get the Index of this class in our array
+            prediction[class_position] = count              # Add the count to our array
+    results_array[len(results_array)-1].extend(prediction)              # Add the array to our result
+    return results_array
+
+# For yolov8 pose
+def GetResultatsPose(results_array,result_pose,positions_head):
+    positions = np.zeros(len(positions_head))
+    positions_head_np = np.array(positions_head)
+    person = np.where(positions_head_np=="person")[0]
+    left = np.where(positions_head_np=="left")[0]
+    right = np.where(positions_head_np=="right")[0]
+    up = np.where(positions_head_np=="up")[0]
+    down = np.where(positions_head_np=="down")[0]
+    vertical = np.where(positions_head_np=="vertical")[0]
+    
+    if len(left)<=0 or len(right)<=0 or len(up)<=0 or len(down)<=0 or len(vertical)<=0:
+        raise Exception("One of the position indice as not been found ")
+    
+    positions[person]=len(result_pose[1:])
+    for liste in result_pose[1:]: #For each predictions
+        for i in range(1, len(liste)):  # For each predicitons predicted
+            liste[i] = float(liste[i])  # Converte the str in float
+
+        result = liste[1:]                 # all the skeletons points
+        directions = GetDirection(result)   # Get the directions
+        
+        if directions[left-1]> directions[right-1]:    # If majority of left
+            positions[left] = positions[left]+1
+        elif directions[right-1]> directions[left-1]:  # If majority of right
+            positions[right] = positions[right]+1
+        elif directions[up-1]>directions[down-1] and directions[up-1]+directions[vertical-1]>directions[left-1]:   # If majority of up without superior left or right
+            positions[up] = positions[up]+1
+        elif directions[up-1]<directions[down-1] and directions[down-1]+directions[vertical-1]>directions[left-1]:   # If majority of up without superior left or right
+            positions[down] = positions[down]+1
+        elif directions[vertical-1]>0: # If it have verticality without predefine direction
+            positions[vertical] = positions[vertical]+1
+        else: # else displau the directions that we have
+            indices = []
+            for k in range(len(directions)):# For all the directions
+                direction = directions[k]
+                if direction!=0:
+                    indices.append(k)
+            
+            if len(indices)<=0:
+                print("A direction of someone as not been found")
+            else : 
+                rate = round(1/len(indices),2)
+                for k in indices:
+                    positions[k+1] = positions[k+1]+rate
+    results_array[len(results_array)-1].extend(positions)
+    return results_array
 
 # Used to classify the images
 def classification(folder_pics,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=0.3,conf_google=0.2,format=True,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
@@ -274,7 +268,7 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
 
             for i in range(len(images_path)):           # For each images
                 image_path = images_path[i]             # Simplify the call
-                if already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
+                if not already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
                     result_google = model_google.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_google)
                     result_pose = DefSkelPoints(model_pose.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose))
                     
@@ -290,59 +284,34 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
     return results
 
 # Used to round off dates
-def arrondir_date(dt, periode, tz):
-    reference_date = datetime(2023, 1, 1, 0, 0, 0)
-    # Récupérer la période en heures
-    heures_periode = periode.n
-    # Effectuer l'opération modulo avec la période en heures
-    date = dt - (dt - reference_date) % pd.Timedelta(hours=heures_periode)
-    # Convertir la date en heure locale
-    date = tz.localize(date)
-    # Renvoyer la date au format ISO
-    return date.isoformat()
-
-# Used to round off dates : monthly time step
-def arrondir_date_month(dt, tz):
-    date = pd.Timestamp(dt.year, dt.month, 1).normalize()
-    date = tz.localize(date)
-    return date.isoformat()
-
-# Used to round off dates : annual time step
-def arrondir_date_year(dt, tz):
-    date = pd.Timestamp(dt.year, 1, 1).normalize()
-    date = tz.localize(date)
-    return date.isoformat()
+def arrondir_date(dt, periode, tz): 
+    try:   
+        # Effectuer l'opération avec la période spécifié
+        date = pd.Timestamp(dt).to_period(periode).to_timestamp()
+    except: # To avoid a bug, we define the default time step as hour
+        print("Error reading value for time_step from config file. Set to basic value, hour.")
+        # Effectuer l'opération avec la période en heures
+        date = pd.Timestamp(dt).to_period('H').to_timestamp()
+ 
+    date = tz.localize(date) # Convertir la date avec le timezone local
+    return date.isoformat() # Renvoyer la date au format ISO
 
 # Used to process output csv
-def gathering_time(res, time_step):
-    time_step = time_step.capitalize()
-    tz = pytz.timezone("Europe/Paris")
-    # Define the desired time step
+def gathering_time(res, time_step, op='Sum'):
+    time_step = time_step.capitalize() # Gère la casse (a=A)
+    tz = pytz.timezone("Europe/Paris") # Define the desired time step
     # Creation of a new column with dates rounded according to time step
-    if time_step=='Hour':
-        periode = pd.offsets.Hour()
-        id = res[0].index('date')
-        for i in range(1,len(res)):
-            tmp = res[i]
-            tmp[id] = arrondir_date(tmp[id], periode, tz)
-    elif time_step=='Day':
-        periode = pd.offsets.Day()
-        res[res.index('date')] = res[res.index('date')].apply(lambda dt: arrondir_date(dt, periode, tz))
-    elif time_step=='Month':
-        res[res.index('date')] = res[res.index('date')].apply(lambda dt: arrondir_date_month(dt, tz))
-    elif time_step=='Year':
-        res[res.index('date')] = res[res.index('date')].apply(lambda dt: arrondir_date_year(dt, tz))
-    else: # To avoid a bug, we define the default time step as hour
-        print("Error reading value for time_step from config file. Set to basic value, hour.")
-        periode = pd.offsets.Hour()
-        res[res.index('date')] = res[res.index('date')].apply(lambda dt: arrondir_date(dt, periode, tz))
+    id = res[0].index('date')
+    for i in range(1,len(res)):
+        tmp = res[i]
+        tmp[id] = arrondir_date(tmp[id], time_step, tz)
 
-    res=regroup_rows(res)
-    print(res)
+    res=regroup_rows(res, op) # Op means operation for regroup
+
     return res
 
 # Used to regroup rows of our list
-def regroup_rows(rows):
+def regroup_rows(rows, op):
     # Dictionary to store the sum of the value of each row
     sum_values = {}
     # Index of 'date' column in rows
@@ -356,20 +325,50 @@ def regroup_rows(rows):
         if date in sum_values: # Look if index for this date already exist
             for i in range(len(row)):
                 if i!=idx: # Sum all the other values
-                    sum_values[date][i] = int(sum_values[date][i]) + int(row[i])
+                    if op=='Sum':
+                        sum_values[date][i] = int(sum_values[date][i]) + int(row[i])
+                    elif op=='Max':
+                        sum_values[date][i] = max(int(sum_values[date][i]) , int(row[i]))
+                    elif op=='Min':
+                        sum_values[date][i] = min(int(sum_values[date][i]) , int(row[i]))
+                    else:
+                        raise Exception("Regroup operation " + op + " is not supported.")
         else :
-            sum_values[date] = row # Give the entire row
+            sum_values[date] = [value if isinstance(value, str) else int(value) for value in row] # Give the entire row
 
     # Change the format of the date
     res = sorted(sum_values.values())
     for row in res:
-        row[idx] = datetime.fromisoformat(row[idx]).strftime("%Y/%m/%d %H:%M:%S")
+        row[idx] = datetime.fromisoformat(row[idx]).strftime("%Y-%m-%d %H:%M:%S")
 
     # Get final array
     rows[1:] = res
 
     return rows
 
+# Used to look the sequence of our images
+def sequence_image(rows, duration=10):
+    time_prev = "" # Stockage le temps précédent
+    i = 1
+    header = rows[0] # Stockage de la ligne d'en-tête
+    rows = sorted(rows[1:], key=lambda x: x[0]) # Tri des dates dans notre liste
+    while i < len(rows): # Parcours de chaque élément de la liste
+        row = rows[i]
+        if time_prev=="": # Si on a pas encore mis le temps précédent
+            time_prev = row[0] # On le met
+        else: # Sinon on compare le temps précedent et le temps actuel
+            if (time_prev + pd.Timedelta(seconds=duration)) > row[0]:
+                # Fusion des données de la ligne actuelle avec celles de la ligne précédente
+                i-=1
+                row = [max(row[j], rows[i+1][j]) for j in range(1,len(row))]
+                del rows[i+1]
+                time_prev = "" # indique la fin de la séquence
+                i-=1
+            else:
+                time_prev = row[0]
+        i+=1
+
+    return [header] + rows
 
 # Used to delete all files from a folder
 def delete_files(folder):
@@ -408,6 +407,7 @@ def already_classify(image, last_classification_date):
     image_modification_date = datetime.fromtimestamp(os.path.getmtime(image))
     return image_modification_date < last_classification_date
 
+# Used to download images from a FTP
 def DownloadImagesFTP(ftp,FTP_DIRECTORY,local_folder):
     # Create the destination path if it not exist
     if not os.path.exists(local_folder):
@@ -426,11 +426,8 @@ def DownloadImagesFTP(ftp,FTP_DIRECTORY,local_folder):
                         os.makedirs(directory)
                     image = os.path.normpath(os.path.join(directory,element)) # Get the image path
                     if not os.path.exists(image):
-                        # Verifier si le chemin ouver est celui sur le pc ou sur le ftp
                         with open( image, 'wb') as f:
                             try:
-                                # VERIFIER cette fonction si image path celui du ftp ou local.
-                                # Verifier se qu'est que RETR
                                 ftp.retrbinary('RETR ' +element, f.write)
                             except Exception:
                                 print()
@@ -465,7 +462,6 @@ def main(config_file_path='config.json', extention="csv"):
 #########
 ## FTP ##
 #########
-
     # Read config file
     try:
         config = read_config(config_file_path)
@@ -493,7 +489,6 @@ def main(config_file_path='config.json', extention="csv"):
             raise
     else:
         Use_FTP = False
-    
 
 ###########
 ## model ##
@@ -509,9 +504,11 @@ def main(config_file_path='config.json', extention="csv"):
     model_name_pose = config['model_name_pose']
     model_name_google = config['model_name_google']
     
+    # Thresholds
     thresh_pose = config['treshold_pose']
     thresh_google = config['treshold_google']
     
+    # Classes path
     classes_path = config['classes_path']
     classes_exception_path = config['classes_exception_path']
     
@@ -555,7 +552,7 @@ def main(config_file_path='config.json', extention="csv"):
     except Exception as e:
         print("Error reading value for treshold google from config file. Must be a float. Set to basic value, "+ str(thresh_google)+".")
 
-
+    # LOAD models
     model_google = YOLO(model_name_google)
     model_pose = YOLO(model_name_pose)
 
@@ -564,7 +561,9 @@ def main(config_file_path='config.json', extention="csv"):
 ###############
 
     start = timeit.default_timer() # Start the time timer
+
     classfication_date_file = os.path.join(os.getcwd(), "last_classification_date.txt")
+
     if Use_FTP:
         DownloadImagesFTP(ftp,FTP_DIRECTORY,local_folder)
         ftp.quit()
@@ -575,14 +574,16 @@ def main(config_file_path='config.json', extention="csv"):
     if extention.startswith('.'): # If a point before, delete it
         extention = extention[1:]
             
-    if config['image_or_time_csv']=="image":
+    if config['image_or_time_csv']=="image": # output csv image per image
         results = classification(local_folder,  model_google, model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=thresh_pose, conf_google = thresh_google, format=False) # Make the prediction
-    elif config['image_or_time_csv']=="time":
+    elif config['image_or_time_csv']=="time": # output csv with date rounded
         results = classification(local_folder,  model_google, model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=thresh_pose, conf_google = thresh_google, format=True) # Make the prediction
-        results = gathering_time(results, config['time_step'])
+        results = sequence_image(results, config['sequence_duration']) # Look at the sequence duration
+        results = gathering_time(results, config['time_step']) # Sum between images of time_step
     else:
         raise Exception("Couldn't read properly image_or_time_csv. The image_or_time_csv must contain 'image' or 'time.")
 
+    # Create unique timestr
     timestr = time.strftime("%Y-%m-%d %H-%M-%S")
     filename = os.path.normpath(os.path.join(output_folder,os.path.basename(local_folder)+"_"+timestr+"."+extention))
         
@@ -597,5 +598,4 @@ def main(config_file_path='config.json', extention="csv"):
     stop = timeit.default_timer()
     print('Computing time: ', str(round(stop - start,3)),"ms.") # get an idea of computing time
     
-
 main()
