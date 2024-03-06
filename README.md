@@ -82,6 +82,10 @@ Pour lancer le script, exécuter :
 ```
 python3 yolov8_attendance.py
 ```
+ou
+```
+python yolov8_attendance.py
+```
 
 N'oubliez pas de créer/modifier votre fichier de config !
 
