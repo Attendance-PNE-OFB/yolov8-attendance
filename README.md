@@ -71,7 +71,7 @@ pip install -e .
 ```
 ou
 ```
-conda create --name <my-env> --file requirements.txt
+conda env create -n <my-env> -f environment.yml
 conda activate <my-env>
 ```
 
