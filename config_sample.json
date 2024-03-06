@@ -3,27 +3,16 @@
     "ftp_username": "user",
     "ftp_password": "mdp",
     "ftp_directory": "/images_folder",
-    "local_folder": "/home/local_folder",
+    "local_folder": "/home/local_folder_images",
     "output_folder": "/home/local_folder/output",
-    "model_file": "/home/local_folder/model/yolov4.h5",
-    "treshold": 0.75,
+    "model_name_pose": "yolov8m-pose.pt",
+    "treshold_pose": 0.3,
+    "model_name_google": "yolov8m-oiv7.pt",
+    "treshold_google": 0.2,
+    "classes_path":"D:\\Folders\\Code\\Python\\yolov8-attendance\\classes.json",
+    "classes_exception_path":"D:\\Folders\\Code\\Python\\yolov8-attendance\\classes_exeptions_rules.json",
     "sequence_duration": 10,
     "time_step": "Hour",
-    "output_format": "csv",
-    "csv_column": {
-        "date": "date",
-        "backpack": "backpack",
-        "bicycle": "bicycle",
-        "dog": "dog",
-        "person": "person",
-        "handbag": "handbag",
-        "ski": "ski",
-        "snowboard": "snowboard",
-        "car": "car",
-        "motorcycle": "motorcycle",
-        "bus": "bus",
-        "horse": "horse",
-        "sheep": "sheep"
-    }
+    "output_format": "csv"
 }
   

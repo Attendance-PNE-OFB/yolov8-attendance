@@ -1,0 +1,152 @@
+{
+	"_comment":"each under categories have to have at a function name [sum,max,min] that can contain other functions. The the elements are not cantifiable, check the classes_exeptions_rules.json and consider this uncantifiable element as if it said the number of peoples (after have sum it to the second json). Categories can be sum. The number is the index in the google dataset under yolo",
+    "Bicycle": {
+    	"max":{
+    		"42": "Bicycle",
+	        "43": "Bicycle helmet",
+	        "44": "Bicycle wheel"
+    	}
+    },
+    "Observator": {
+    	"max":{
+    		"48": "Binoculars",
+        	"82": "Camera"
+    	}
+    },
+    "Hiking": {
+    	"max":{
+    		"15": "Backpack",
+	        "250": "Hiking equipment",
+	        "503": "Suitcase"
+    	}
+    },
+    "Tourist": {
+    	"max":{
+    		"145": "Crutch",
+	        "237": "Handbag",
+	        "249": "High heels"
+    	}
+    },
+    "Cross": {
+    	"max":{
+    		"342": "Motorcycle"
+    	}
+    },
+    "MountainSport": {
+    	"sum":{
+    		"462": "Ski",
+        	"471": "Snowboard"
+    	}
+    },
+    "Sporty": {
+    	"sum":{
+    		"484": "Sports equipment",
+        	"485": "Sports uniform"
+    	}
+        
+    },
+    "Paddle": {
+    	"sum":{
+    		"506": "Surfboard"
+    	}
+    },
+    "Camping": {
+    	"max":{
+    		"530": "Tent"
+    	}
+    },
+    "Animal":{
+        "sum":{
+            "5": "Alpaca",
+            "7": "Animal",
+            "9": "Antelope",
+            "28": "Bat (Animal)",
+            "49": "Bird",
+            "51": "Blue jay",
+            "69": "Brown bear",
+            "75": "Butterfly",
+            "84": "Canary",
+            "91": "Carnivore",
+            "96": "Cat",
+            "99": "Cattle",
+            "108": "Chicken",
+            "152": "Deer",
+            "158": "Dinosaur",
+            "160": "Dog",
+            "167": "Dragonfly",
+            "174": "Duck",
+            "176": "Eagle",
+            "184": "Falcon",
+            "206": "Fox",
+            "209": "Frog",
+            "219": "Goat",
+            "246": "Hedgehog",
+            "255": "Horse",
+            "282": "Jaguar (Animal)",
+            "297": "Koala",
+            "307": "Leopard",
+            "313": "Lion",
+            "315": "Lizard",
+            "319": "Lynx",
+            "321": "Mammal",
+            "361": "Owl",
+            "359": "Otter",
+            "366": "Panda",
+            "371": "Parrot",
+            "379": "Penguin",
+            "387": "Pig",
+            "411": "Rabbit",
+            "412": "Raccoon",
+            "452": "Sheep",
+            "470": "Snake",
+            "488": "Squirrel",
+            "534": "Tiger",
+            "544": "Tortoise"
+        }
+    },
+    "99": "Cattle",
+    "255": "Horse",
+    "160": "Dog",
+    "Male": {
+    	"sum":{
+    		"63": "Boy",
+        	"322": "Man"
+    	}
+    },
+    "Female": {
+    	"sum":{
+    		"216": "Girl",
+        	"594": "Woman"
+    	} 
+    },
+    "Child": {
+    	"sum":{
+    		"63": "Boy",
+        	"216": "Girl"
+    	}  
+    },
+    "Adult": {
+    	"sum":{
+    		"322": "Man",
+        	"594": "Woman"
+    	}
+    },
+    "Vehicle": {
+    	"sum":{
+    		"90": "Car",
+	        "302": "Land vehicle",
+	        "558": "Truck",
+	        "567": "Vehicle"
+    	}
+    },
+    "OutOfLaw": {
+    	"sum":{
+            "14": "Axe",
+    		"103": "Chainsaw",
+            "150": "Dagger",
+            "296": "Knife",
+	        "423": "Rifle",
+	        "580": "Weapon"
+    	}
+    }
+}
