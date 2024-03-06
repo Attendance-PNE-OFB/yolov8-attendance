@@ -21,11 +21,20 @@ ou
 ```
 git clone https://github.com/Attendance-PNE-OFB/yolov8-attendance.git
 ```
+Après : 
+```
+cd yolov8-attendance
+```
 
 Il vous faut créer votre version du fichier de configuration.
 
+Linux & Mac :
 ```
-cp config_sample.json config_json
+cp config_sample.json config.json
+```
+Windows :
+```
+copy config_sample.json config.json
 ```
 
 #### Description des paramètres de configuration
@@ -62,7 +71,7 @@ pip install -e .
 ```
 ou
 ```
-conda create --name <my-env> --file requirements.txt
+conda env create -n <my-env> -f environment.yml
 conda activate <my-env>
 ```
 
@@ -72,6 +81,10 @@ Pour lancer le script, exécuter :
 
 ```
 python3 yolov8_attendance.py
+```
+ou
+```
+python yolov8_attendance.py
 ```
 
 N'oubliez pas de créer/modifier votre fichier de config !
