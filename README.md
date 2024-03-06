@@ -21,11 +21,20 @@ ou
 ```
 git clone https://github.com/Attendance-PNE-OFB/yolov8-attendance.git
 ```
+Après : 
+```
+cd yolov8-attendance
+```
 
 Il vous faut créer votre version du fichier de configuration.
 
+Linux & Mac :
 ```
 cp config_sample.json config_json
+```
+Windows :
+```
+copy config_sample.json config_json
 ```
 
 #### Description des paramètres de configuration
