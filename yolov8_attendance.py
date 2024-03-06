@@ -142,6 +142,30 @@ def ApplyFunctions(dic,class_counts,json,nb_peoples):
         return ExceptionCountItem(class_counts[int(func_key)],func_val,json,nb_peoples)
     else:
         raise Exception("Invalid instance of ", str(func_val), " : ",type(func_val))
+        
+def regroup_rows(rows):
+    # Dictionary to store the maximum value for each column index
+    max_values = {}
+    idx = rows[0].index('date')
+    rows_data = rows[1:]
+    
+    # Iterate through each row
+    for row in rows_data:
+        idx = row[idx]
+        if idx in max_values:
+            for i in range(idx, len(row)):
+                max_values[idx][i] = max(max_values[idx][i], row[i])
+        else :
+            max_values[idx] = row
+
+
+    # Convert the max_values dictionary to a list of tuples sorted by column index
+    rows[1:] = sorted(max_values.items())
+
+    # Create a new row with the maximum values for each column index
+    # Return the new row containing the maximum values
+    return rows
+
 
 # For yolov8 OIV7
 def GetResultatsGoogle(results,result_google,names, classes_path,classes_exception_path):
@@ -172,6 +196,7 @@ def GetResultatsGoogle(results,result_google,names, classes_path,classes_excepti
             else:
                 raise Exception("Invalid instance of ", str(value), " : ",type(value))        
     return results
+    
 
 # For yolov8 coco
 def GetResultatsNormal(results_array,classes,result_model):
@@ -273,7 +298,7 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
                     result_pose = DefSkelPoints(model_pose.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose))
                     
                     if format: #True = time format | False = image format
-                        date = datetime.strptime(metadata[image_path]['date'], "%Y:%m:%d %H:%M:%S")
+                        date = datetime.strptime(metadata[image_path.replace('\\','/').replace('//','/')]['date'], "%Y:%m:%d %H:%M:%S")
                         results.append([date]) # Last line is the timestamp of the image
                     else:
                         results.append([image_path])    # First line is the image path
