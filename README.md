@@ -1,14 +1,14 @@
 # YOLOv8_attendance
 
-Script de détection automatique (des personnes, de leurs directions, activités, ages, et autre) dans des images, basé sur le modèle [YOLOv8](https://docs.ultralytics.com/fr/models/yolov8/) entrainé sur le jeu de données [COCO](https://cocodataset.org/#home) pour le comptage d'humain et leurs direction et le jeu de données [Open images dataset V7](https://storage.googleapis.com/openimages/web/index.html).
+Script de détection automatique (des personnes, de leurs directions, activités, ages, et autre) dans des images, basé sur le modèle [YOLOv8](https://docs.ultralytics.com/fr/models/yolov8/) entrainé sur le jeu de données [COCO](https://cocodataset.org/#home) pour le comptage d'humain et leurs directions et le jeu de données [Open images dataset V7](https://storage.googleapis.com/openimages/web/index.html) pour le genre, l'âge, les activités.
 
 ## Description
 
 Ce script utilise le modèle de réseau de neurones [YOLOv8](https://docs.ultralytics.com/fr/models/yolov8/) pour détecter des objets dans des images provenant d'un serveur FTP ou d'un répertoire local.
 
-Ce script permet ainsi de compter automatiquement, sans visualisation par l'utilisateur, le nombre de personnes présentes sur des images, leurs directions, activités, age et sexe notamment dans le cadre de suivis de la fréquentation réalisés avec des pièges photos à déclenchement automatique. Le script compte le nombre maximum d'humains au sein de chaque séquence, retenu comme taille de groupe.
+Ce script permet ainsi de compter automatiquement, sans visualisation par l'utilisateur, le nombre de personnes présentes sur des images, leurs directions, activités, âge et sexe notamment dans le cadre de suivis de la fréquentation réalisés avec des pièges photos à déclenchement automatique. Le script compte le nombre maximum d'humains au sein de chaque séquence, retenu comme taille de groupe.
 
-En complément, voir le [rapport de stage](https://data.ecrins-parcnational.fr/documents/stages/2023-09-rapport-stage-Aurelien-Coste-photos-IA-frequentation.pdf) d'Aurélien Coste qui a travaillé en 2023 sur la version 0.2.0, ainsi que son [support de restitution](https://data.ecrins-parcnational.fr/documents/stages/2023-09-restitution-stage-Aurelien-Coste-photos-IA-frequentation.pdf).
+En complément, voir le [rapport de stage](https://data.ecrins-parcnational.fr/documents/stages/2023-09-rapport-stage-Aurelien-Coste-photos-IA-frequentation.pdf) d'Aurélien Coste qui a travaillé en 2023 sur la version utilisant YOLOv4, ainsi que son [support de restitution](https://data.ecrins-parcnational.fr/documents/stages/2023-09-restitution-stage-Aurelien-Coste-photos-IA-frequentation.pdf).
 
 ## Installation
 
@@ -36,19 +36,20 @@ cp config_sample.json config_json
 - **ftp_username :** Username pour la connexion au serveur FTP  
 - **ftp_password :** Mot de passe pour la connexion au serveur FTP  
 - **ftp_directory :** Répertoire contenant les images sur le serveur FTP  
-- **local_folder :** En mode FTP, il s'agit du répertoire dans lequel les images seront téléchargées puis classifiées puis supprimées.   
+- **local_folder :** En mode FTP, il s'agit du répertoire dans lequel les images seront téléchargées.   
   En mode local, il s'agit du répertoire contenant les images à classifier  
 - **output_folder :** Répertoire dans lequel les fichiers de sortie seront stockés
 - **model_name_pose :** Nom du model pose souhaité ["yolov8n-pose.pt", "yolov8s-pose.pt", "yolov8m-pose.pt", "yolov8l-pose.pt", "yolov8x-pose.pt", "yolov8x-pose-p6.pt"]
-- **treshold_pose :** Valeur du seuil de classification pour le modèle pose. Cette valeur varie de 0 à 1. Plus la valeur est basse, plus nous sommes permissifs avec les classifications. Plus la valeur est haute, plus nous sommes restrictifs avec les classifications. ex : 0.27
+- **treshold_pose :** Valeur du seuil de classification pour le modèle pose. Cette valeur varie de 0 à 1. Plus la valeur est basse, plus nous sommes permissifs avec les classifications. Plus la valeur est haute, plus nous sommes restrictifs avec les classifications  
 - **model_name_google :** Nom du model pose souhaité ["yolov8n-oiv7.pt", "yolov8s-oiv7.pt", "yolov8m-oiv7.pt", "yolov8l-oiv7.pt", "yolov8x-oiv7.pt"]
-- **treshold_google :** Valeur du seuil de classification pour le modèle google. Cette valeur varie de 0 à 1. Plus la valeur est basse, plus nous sommes permissifs avec les classifications. Plus la valeur est haute, plus nous sommes restrictifs avec les classifications. ex : 0.10
-- **classes_path :** Position du fichier classes.json
-- **classes_exception_path :** Position du fichier classes_exeptions_rules.json
+- **treshold_google :** Valeur du seuil de classification pour le modèle Google. Cette valeur varie de 0 à 1. Plus la valeur est basse, plus nous sommes permissifs avec les classifications. Plus la valeur est haute, plus nous sommes restrictifs avec les classifications
+- **classes_path :** Chemin vers le fichier "classes.json"
+- **classes_exception_path :** Chemin vers le fichier "classes_exeptions_rules.json"
+- **image_or_time_csv :** Indique le contenu de sortie pour le fichier. Les valeurs possibles sont ["image", "time"]. "image" -> le fichier de sortie contiendra les classifications par image. "time" -> le fichier de sortie contiendra les classifications en fonction du temps des photos  
 - **sequence_duration :** Valeur (en secondes) du temps de séquence. Le temps de séquence est utilisé par le script pour compter les groupes d'individus. Lors de la classification de l'image n, si l'image n-1 a été classifiée il y a moins du temps de séquence choisi alors le script considère qu'il s'agit du même groupe d'individus et donc il ne compte pas deux fois ce groupe.  
-  La valeur de base est de 10 secondes. Selon la fréquentation de votre sentier, vous pouvez baisser jusqu'à 5 s'il est très fréquenté et monter jusqu'à 15 s'il est très peu fréquenté. Au-delà de cet intervalle, les résultats sont moins bons.  
+  La valeur de base est de 10 secondes. Selon la fréquentation de votre sentier, vous pouvez baisser jusqu'à 5 s'il est très fréquenté et monter jusqu'à 15 s'il est très peu fréquenté. Au-delà de cet intervalle, les résultats sont généralement moins bons.  
 - **time_step :** Pas de temps pour concaténer les classifications du modèle et sortir un fichier avec un nombre de passage en fonction du pas de temps choisi.  
-  Valeur de base : 'Hour', peut prendre les valeurs : 'Day', 'Month' et 'Year'  
+  Valeur de base : 'H' (Hour), peut prendre les valeurs : 'D', 'M' et 'Y'  (Day, Month, Year)  
 - **output_format :** Format du fichier de sortie. 
   Valeur de base 'csv', peut prendre les valeurs : 'dat'  
 
