@@ -250,12 +250,13 @@ def GetResultatsPose(results_array,result_pose,positions_head):
                 if direction!=0:
                     indices.append(k)
             
-            if len(indices)<=0:
-                print("A direction of someone as not been found")
-            else : 
+            if len(indices)>0:
                 rate = round(1/len(indices),2)
                 for k in indices:
                     positions[k+1] = positions[k+1]+rate
+            """else : 
+                print("A direction of someone as not been found")"""
+                
     results_array[len(results_array)-1].extend(positions)
     return results_array
 
@@ -294,8 +295,8 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
             for i in range(len(images_path)):           # For each images
                 image_path = images_path[i]             # Simplify the call
                 if not already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
-                    result_google = model_google.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_google)
-                    result_pose = DefSkelPoints(model_pose.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose))
+                    result_google = model_google.predict(image_path, verbose=False, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_google)
+                    result_pose = DefSkelPoints(model_pose.predict(image_path, verbose=False, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose))
                     
                     if format: #True = time format | False = image format
                         date = datetime.strptime(metadata[image_path.replace('\\','/').replace('//','/')]['date'], "%Y:%m:%d %H:%M:%S")
@@ -305,7 +306,8 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
                     
                     results = GetResultatsPose(results,result_pose,positions_head)
                     results = GetResultatsGoogle(results,result_google,google_names, classes_path,classes_exception_path)
-                    print("Prediction : ", round(((i)*100/len(images)),2),"%") # Process position bar
+                    print("\rPrediction : ", round(((i)*100/len(images)),2),"%", end='', flush=True) # Process position bar
+    print()
     return results
 
 # Used to round off dates
