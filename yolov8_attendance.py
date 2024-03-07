@@ -469,7 +469,8 @@ class MyFTP_TLS(FTP_TLS):
                                             server_hostname=self.host,
                                             session=self.sock.session)  # this is the fix
         return conn, size
-    
+
+# Used to delete all in the folder
 def DeleteAll(path):
     for root, dirs, files in os.walk(path, topdown=False): # from leaf to root
         # Delete all files in the current directory
@@ -477,7 +478,6 @@ def DeleteAll(path):
             file_path = os.path.join(root, file)
             try:
                 os.remove(file_path)
-                print(f"Deleted file: {file_path}")
             except Exception as e:
                 print(f"Failed to delete file: {file_path} - {e}")
 
@@ -486,9 +486,10 @@ def DeleteAll(path):
             dir_path = os.path.join(root, dir)
             try:
                 os.rmdir(dir_path)
-                print(f"Deleted directory: {dir_path}")
             except Exception as e:
                 print(f"Failed to delete directory: {dir_path} - {e}")
+    
+    print(f"Successful deletion.")
     
 
 # Main function
