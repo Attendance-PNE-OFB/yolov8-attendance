@@ -22,7 +22,7 @@ from DataManagment import DefSkelPoints
 from extractMetadata import extract_metadata
 from Directions import GetDirection
 from math import ceil
-
+import shutil
 
 ###############
 ## functions ##
@@ -397,20 +397,6 @@ def sequence_image(rows, duration=10):
 
     return [header] + rows
 
-# Used to delete all files from a folder
-def delete_files(folder):
-    try:
-        for root, dirs, files in os.walk(folder, topdown=False):
-            for file in files:
-                file_path = os.path.join(root, file)
-                os.remove(file_path)
-            for dir_name in dirs:
-                dir_path = os.path.join(root, dir_name)
-                os.rmdir(dir_path)
-        os.rmdir(folder)
-    except Exception as e:
-        print(f"Unexpected error when deleting directory {folder}")
-
 # Used to get the last classification date
 def get_last_classification_date(file_path):
     if not os.path.exists(file_path):
@@ -483,6 +469,27 @@ class MyFTP_TLS(FTP_TLS):
                                             server_hostname=self.host,
                                             session=self.sock.session)  # this is the fix
         return conn, size
+    
+def DeleteAll(path):
+    for root, dirs, files in os.walk(path, topdown=False): # from leaf to root
+        # Delete all files in the current directory
+        for file in files:
+            file_path = os.path.join(root, file)
+            try:
+                os.remove(file_path)
+                print(f"Deleted file: {file_path}")
+            except Exception as e:
+                print(f"Failed to delete file: {file_path} - {e}")
+
+        # Delete all folders in the current directory
+        for dir in dirs:
+            dir_path = os.path.join(root, dir)
+            try:
+                os.rmdir(dir_path)
+                print(f"Deleted directory: {dir_path}")
+            except Exception as e:
+                print(f"Failed to delete directory: {dir_path} - {e}")
+    
 
 # Main function
 def main(config_file_path='config.json', extention="csv"):
@@ -609,6 +616,9 @@ def main(config_file_path='config.json', extention="csv"):
         results = gathering_time(results, config['time_step']) # Sum between images of time_step
     else:
         raise Exception("Couldn't read properly image_or_time_csv. The image_or_time_csv must contain 'image' or 'time.")
+    
+    if Use_FTP:
+        DeleteAll(local_folder)
 
     # Create unique timestr
     timestr = time.strftime("%Y-%m-%d %H-%M-%S")
