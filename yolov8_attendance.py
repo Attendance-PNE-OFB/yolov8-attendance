@@ -534,8 +534,8 @@ def main(config_file_path='config.json', extention="csv"):
     thresh_google = config['treshold_google']
     
     # Classes path
-    classes_path = config['classes_path']
-    classes_exception_path = config['classes_exception_path']
+    classes_path = './classes.json'
+    classes_exception_path = './classes_exeptions_rules.json'
     
     # Verify the authenticity of the files
     if local_folder=="":
