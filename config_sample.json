@@ -9,8 +9,6 @@
     "treshold_pose": 0.3,
     "model_name_google": "yolov8m-oiv7.pt",
     "treshold_google": 0.1,
-    "classes_path":"/home/folder/classes.json",
-    "classes_exception_path":"/home/folder/classes_exeptions_rules.json",
     "image_or_time_csv": "time",
     "sequence_duration": 10,
     "time_step": "H",
