@@ -22,7 +22,7 @@ from DataManagment import DefSkelPoints
 from extractMetadata import extract_metadata
 from Directions import GetDirection
 from math import ceil
-
+import shutil
 
 ###############
 ## functions ##
@@ -250,12 +250,13 @@ def GetResultatsPose(results_array,result_pose,positions_head):
                 if direction!=0:
                     indices.append(k)
             
-            if len(indices)<=0:
-                print("A direction of someone as not been found")
-            else : 
+            if len(indices)>0:
                 rate = round(1/len(indices),2)
                 for k in indices:
                     positions[k+1] = positions[k+1]+rate
+            """else : 
+                print("A direction of someone as not been found")"""
+                
     results_array[len(results_array)-1].extend(positions)
     return results_array
 
@@ -294,8 +295,8 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
             for i in range(len(images_path)):           # For each images
                 image_path = images_path[i]             # Simplify the call
                 if not already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
-                    result_google = model_google.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_google)
-                    result_pose = DefSkelPoints(model_pose.predict(image_path, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose))
+                    result_google = model_google.predict(image_path, verbose=False, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_google)
+                    result_pose = DefSkelPoints(model_pose.predict(image_path, verbose=False, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose))
                     
                     if format: #True = time format | False = image format
                         date = datetime.strptime(metadata[image_path.replace('\\','/').replace('//','/')]['date'], "%Y:%m:%d %H:%M:%S")
@@ -305,7 +306,8 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
                     
                     results = GetResultatsPose(results,result_pose,positions_head)
                     results = GetResultatsGoogle(results,result_google,google_names, classes_path,classes_exception_path)
-                    print("Prediction : ", round(((i)*100/len(images)),2),"%") # Process position bar
+                    print("\rPrediction : ", round(((i)*100/len(images)),2),"%", end='', flush=True) # Process position bar
+    print()
     return results
 
 # Used to round off dates
@@ -395,20 +397,6 @@ def sequence_image(rows, duration=10):
 
     return [header] + rows
 
-# Used to delete all files from a folder
-def delete_files(folder):
-    try:
-        for root, dirs, files in os.walk(folder, topdown=False):
-            for file in files:
-                file_path = os.path.join(root, file)
-                os.remove(file_path)
-            for dir_name in dirs:
-                dir_path = os.path.join(root, dir_name)
-                os.rmdir(dir_path)
-        os.rmdir(folder)
-    except Exception as e:
-        print(f"Unexpected error when deleting directory {folder}")
-
 # Used to get the last classification date
 def get_last_classification_date(file_path):
     if not os.path.exists(file_path):
@@ -482,6 +470,28 @@ class MyFTP_TLS(FTP_TLS):
                                             session=self.sock.session)  # this is the fix
         return conn, size
 
+# Used to delete all in the folder
+def DeleteAll(path):
+    for root, dirs, files in os.walk(path, topdown=False): # from leaf to root
+        # Delete all files in the current directory
+        for file in files:
+            file_path = os.path.join(root, file)
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"Failed to delete file: {file_path} - {e}")
+
+        # Delete all folders in the current directory
+        for dir in dirs:
+            dir_path = os.path.join(root, dir)
+            try:
+                os.rmdir(dir_path)
+            except Exception as e:
+                print(f"Failed to delete directory: {dir_path} - {e}")
+    
+    print(f"Successful deletion.")
+    
+
 # Main function
 def main(config_file_path='config.json', extention="csv"):
 #########
@@ -534,8 +544,8 @@ def main(config_file_path='config.json', extention="csv"):
     thresh_google = config['treshold_google']
     
     # Classes path
-    classes_path = config['classes_path']
-    classes_exception_path = config['classes_exception_path']
+    classes_path = './classes.json'
+    classes_exception_path = './classes_exeptions_rules.json'
     
     # Verify the authenticity of the files
     if local_folder=="":
@@ -607,6 +617,9 @@ def main(config_file_path='config.json', extention="csv"):
         results = gathering_time(results, config['time_step']) # Sum between images of time_step
     else:
         raise Exception("Couldn't read properly image_or_time_csv. The image_or_time_csv must contain 'image' or 'time.")
+    
+    if Use_FTP:
+        DeleteAll(local_folder)
 
     # Create unique timestr
     timestr = time.strftime("%Y-%m-%d %H-%M-%S")
