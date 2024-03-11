@@ -26,7 +26,8 @@ Après :
 cd yolov8-attendance
 ```
 
-Vous aurez également besoin d'installer sur votre machine la librairie exiftool :
+Vous aurez également besoin d'installer sur votre machine la librairie exiftool :  
+
 Linux & Mac :
 ```
 sudo apt install libimage-exiftool-perl
@@ -66,7 +67,8 @@ copy config_sample.json config.json
 - **time_step :** Pas de temps pour concaténer les classifications du modèle et sortir un fichier avec un nombre de passage en fonction du pas de temps choisi.  
   Valeur de base : 'H' (Hour), peut prendre les valeurs : 'D', 'M' et 'Y'  (Day, Month, Year)  
 - **output_format :** Format du fichier de sortie. 
-  Valeur de base 'csv', peut prendre les valeurs : 'dat'  
+  Valeur de base 'csv', peut prendre les valeurs : 'dat'
+- **blur :** Prend la valeur True ou False. True = copie et floutage des images de base (ne supprime pas les images brutes). False = pas de floutage
 
 Une fois le fichier de configuration modifié selon vos besoins, vous pouvez créer un environnement virtuel python :
 
