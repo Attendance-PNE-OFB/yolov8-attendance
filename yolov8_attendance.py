@@ -22,7 +22,6 @@ from DataManagment import DefSkelPoints
 from extractMetadata import extract_metadata
 from Directions import GetDirection
 from math import ceil
-import shutil
 
 ###############
 ## functions ##
@@ -142,30 +141,6 @@ def ApplyFunctions(dic,class_counts,json,nb_peoples):
         return ExceptionCountItem(class_counts[int(func_key)],func_val,json,nb_peoples)
     else:
         raise Exception("Invalid instance of ", str(func_val), " : ",type(func_val))
-        
-def regroup_rows(rows):
-    # Dictionary to store the maximum value for each column index
-    max_values = {}
-    idx = rows[0].index('date')
-    rows_data = rows[1:]
-    
-    # Iterate through each row
-    for row in rows_data:
-        idx = row[idx]
-        if idx in max_values:
-            for i in range(idx, len(row)):
-                max_values[idx][i] = max(max_values[idx][i], row[i])
-        else :
-            max_values[idx] = row
-
-
-    # Convert the max_values dictionary to a list of tuples sorted by column index
-    rows[1:] = sorted(max_values.items())
-
-    # Create a new row with the maximum values for each column index
-    # Return the new row containing the maximum values
-    return rows
-
 
 # For yolov8 OIV7
 def GetResultatsGoogle(results,result_google,names, classes_path,classes_exception_path,header):
@@ -419,13 +394,14 @@ def already_classify(image, last_classification_date):
     image_modification_date = datetime.fromtimestamp(os.path.getmtime(image))
     return image_modification_date < last_classification_date
 
+# Used to download one image
 def DownloadImage(ftp,element,local_folder,FTP_DIRECTORY):
     directory = os.path.normpath(os.path.join(local_folder,FTP_DIRECTORY[1:]))
     if not os.path.exists(directory):
         os.makedirs(directory)
     image = os.path.normpath(os.path.join(directory,element)) # Get the image path
     if not os.path.exists(image):
-        with open( image, 'wb') as f:
+        with open(image, 'wb') as f:
             try:
                 ftp.retrbinary('RETR ' +element, f.write)
             except Exception:
@@ -434,6 +410,7 @@ def DownloadImage(ftp,element,local_folder,FTP_DIRECTORY):
                 return False
     return image
 
+# Used to classify the given image
 def FtpClassification(image,positions_head,classfication_date_file,model_google,model_pose, classes_path,classes_exception_path,google_names,header,conf_pose=0.3,conf_google=0.2,save=False, save_txt=False,save_conf=False,save_crop=False):
     results = []
     if format:
@@ -453,6 +430,7 @@ def FtpClassification(image,positions_head,classfication_date_file,model_google,
     results = GetResultatsGoogle(results,result_google,google_names, classes_path,classes_exception_path,header)
     return results[0]
 
+# Used to classify all images of a given FTP folder
 def BrowseFTP(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,positions_head,results,google_names,header,conf_pose=0.3,conf_google=0.2,format=True,save=False, save_txt=False,save_conf=False,save_crop=False):
     while True:
         try:
@@ -472,11 +450,11 @@ def BrowseFTP(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classficat
                       os.remove(image)
                       print("\r", pourcentage,"% [---]", end='', flush=True) # Process position bar
                 elif not os.path.isfile(element):
+                    # If we found a folder, we do recursive call within the founded folder
                     results.extends(BrowseFTP(ftp,FTP_DIRECTORY+"/"+element,os.path.normpath(os.path.join(local_folder)),model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,positions_head,[],google_names,header,conf_pose,conf_google,format,save, save_txt,save_conf,save_crop))
                 else:
                     print()
                     print(element," : ",type(element)," not take into considerations")
-                print("\r",i,"/",len(elements), end='', flush=True) # Progression
             break
         except Exception as e:
             print()
@@ -503,11 +481,10 @@ def FtpProcessing(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classf
     # create our output header
     header.extend(positions_head)
     header.extend([google_names[int(key)] if key.isdigit() else key for key, value in classes_json.items() if "_comment" not in key])    # Fill the header with the class names
-    results = [header]                                                  # Init the list of the results
+    # Get the datas (result of classification)
     datas = BrowseFTP(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,positions_head,[],google_names,header,conf_pose,conf_google,format,save, save_txt,save_conf,save_crop)
 
-    results = results + datas
-    print(results)
+    results = [header] + datas
     return results
  
 """
@@ -658,7 +635,6 @@ def main(config_file_path='config.json', extention="csv"):
             ftp.quit()
         else:
             results = classification(local_folder,  model_google, model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=thresh_pose, conf_google = thresh_google, format=False) # Make the prediction
-        DeleteAll(local_folder) # Delete the folders created
     elif config['image_or_time_csv']=="time": # output csv with date rounded
         if Use_FTP:
             results = FtpProcessing(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=0.3,conf_google=0.2,format=True,save=False, save_txt=False,save_conf=False,save_crop=False)
@@ -671,7 +647,9 @@ def main(config_file_path='config.json', extention="csv"):
     else:
         raise Exception("Couldn't read properly image_or_time_csv. The image_or_time_csv must contain 'image' or 'time.")
         
-        
+    if Use_FTP:
+        DeleteAll(local_folder) # Delete the folders created
+
     # Get our extention
     if not config['output_format']=="":
         extention = config['output_format']
