@@ -26,7 +26,15 @@ Après :
 cd yolov8-attendance
 ```
 
-Il vous faut créer votre version du fichier de configuration.
+Vous aurez également besoin d'installer sur votre machine la librairie exiftool :
+Linux & Mac :
+```
+sudo apt install libimage-exiftool-perl
+```
+Windows :
+https://exiftool.org/install.html#Windows
+
+Ensuite, il vous faut créer votre version du fichier de configuration.
 
 Linux & Mac :
 ```
