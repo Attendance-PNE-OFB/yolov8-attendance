@@ -12,5 +12,6 @@
     "image_or_time_csv": "time",
     "sequence_duration": 10,
     "time_step": "H",
-    "output_format": "csv"
+    "output_format": "csv",
+    "blur": false
 }
