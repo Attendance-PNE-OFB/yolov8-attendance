@@ -23,6 +23,7 @@ from extractMetadata import extract_metadata
 from Directions import GetDirection
 from math import ceil
 import shutil
+from BlurImageFromPrediction import blur_Image_and_Replace
 
 ###############
 ## functions ##
@@ -260,7 +261,7 @@ def GetResultatsPose(results_array,result_pose,positions_head):
     return results_array
 
 # Used to classify the images
-def classification(folder_pics,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=0.3,conf_google=0.2,format=True,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
+def classification(folder_pics,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,blur,conf_pose=0.3,conf_google=0.2,format=True,save=False, save_txt=False,save_conf=False,save_crop=False): #nb_elements,
     if format:   
         header = ["date"]     # Init the header
     else:
@@ -293,9 +294,11 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
 
             for i in range(len(images_path)):           # For each images
                 image_path = images_path[i]             # Simplify the call
-                if not already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
+                if not 'blur' in image_path.split(os.path.sep) and not already_classify(image_path, get_last_classification_date(classfication_date_file)): # If not already classify
                     result_google = model_google.predict(image_path, verbose=False, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_google)
-                    result_pose = DefSkelPoints(model_pose.predict(image_path, verbose=False, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose))
+                    predict_pose = model_pose.predict(image_path, verbose=False, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose)           
+                    result_pose = DefSkelPoints(predict_pose)
+                    blur_Image_and_Replace(predict_pose,os.path.normpath(os.path.join(folder_pics,'blur')))
                     
                     if format: #True = time format | False = image format
                         date = datetime.strptime(metadata[image_path.replace('\\','/').replace('//','/')]['date'], "%Y:%m:%d %H:%M:%S")
@@ -434,14 +437,16 @@ def DownloadImage(ftp,element,local_folder,FTP_DIRECTORY):
                 return False
     return image
 
-def FtpClassification(image,positions_head,classfication_date_file,model_google,model_pose, classes_path,classes_exception_path,google_names,header,conf_pose=0.3,conf_google=0.2,save=False, save_txt=False,save_conf=False,save_crop=False):
+def FtpClassification(image,positions_head,classfication_date_file,model_google,model_pose, classes_path,classes_exception_path,google_names,header,blur,local_folder,conf_pose=0.3,conf_google=0.2,save=False, save_txt=False,save_conf=False,save_crop=False):
     results = []
     if format:
         metadata = extract_metadata(image) # Load metadata only if time format for output csv
 
     if not already_classify(image, get_last_classification_date(classfication_date_file)): # If not already classify
         result_google = model_google.predict(image, verbose=False, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_google)
-        result_pose = DefSkelPoints(model_pose.predict(image, verbose=False, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose))
+        predict_pose = model_pose.predict(image, verbose=False, save=save, save_txt=save_txt,save_conf=save_conf,save_crop=save_crop,conf=conf_pose)
+        result_pose = DefSkelPoints(predict_pose)
+        blur_Image_and_Replace(predict_pose,os.path.normpath(os.path.join(local_folder,'blur')))
                     
         if format: #True = time format | False = image format
             date = datetime.strptime(metadata[image.replace('\\','/').replace('//','/')]['date'], "%Y:%m:%d %H:%M:%S")
@@ -453,7 +458,7 @@ def FtpClassification(image,positions_head,classfication_date_file,model_google,
     results = GetResultatsGoogle(results,result_google,google_names, classes_path,classes_exception_path,header)
     return results[0]
 
-def BrowseFTP(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,positions_head,results,google_names,header,conf_pose=0.3,conf_google=0.2,format=True,save=False, save_txt=False,save_conf=False,save_crop=False):
+def BrowseFTP(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,positions_head,results,google_names,header,blur,conf_pose=0.3,conf_google=0.2,format=True,save=False, save_txt=False,save_conf=False,save_crop=False):
     while True:
         try:
             ftp.cwd(FTP_DIRECTORY)          # Go to the folder
@@ -467,12 +472,12 @@ def BrowseFTP(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classficat
                     image = DownloadImage(ftp,element,local_folder,FTP_DIRECTORY)
                     print("\r", pourcentage,"% [-  ]", end='', flush=True) # Process position bar
                     if image:
-                      results.append(FtpClassification(image,positions_head,classfication_date_file,model_google,model_pose, classes_path,classes_exception_path,google_names,header,conf_pose,conf_google,save, save_txt,save_conf,save_crop))
+                      results.append(FtpClassification(image,positions_head,classfication_date_file,model_google,model_pose, classes_path,classes_exception_path,google_names,header,blur,local_folder,conf_pose,conf_google,save, save_txt,save_conf,save_crop))
                       print("\r", pourcentage,"% [-- ]", end='', flush=True) # Process position bar
                       os.remove(image)
                       print("\r", pourcentage,"% [---]", end='', flush=True) # Process position bar
                 elif not os.path.isfile(element):
-                    results.extends(BrowseFTP(ftp,FTP_DIRECTORY+"/"+element,os.path.normpath(os.path.join(local_folder)),model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,positions_head,[],google_names,header,conf_pose,conf_google,format,save, save_txt,save_conf,save_crop))
+                    results.extends(BrowseFTP(ftp,FTP_DIRECTORY+"/"+element,os.path.normpath(os.path.join(local_folder)),model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,positions_head,[],google_names,header,blur,conf_pose,conf_google,format,save, save_txt,save_conf,save_crop))
                 else:
                     print()
                     print(element," : ",type(element)," not take into considerations")
@@ -484,7 +489,7 @@ def BrowseFTP(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classficat
     return results
 
 # Used to download images from a FTP
-def FtpProcessing(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=0.3,conf_google=0.2,format=True,save=False, save_txt=False,save_conf=False,save_crop=False):
+def FtpProcessing(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,blur,conf_pose=0.3,conf_google=0.2,format=True,save=False, save_txt=False,save_conf=False,save_crop=False):
     # Create the destination path if it not exist
     if not os.path.exists(local_folder):
         os.makedirs(local_folder)
@@ -504,10 +509,9 @@ def FtpProcessing(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classf
     header.extend(positions_head)
     header.extend([google_names[int(key)] if key.isdigit() else key for key, value in classes_json.items() if "_comment" not in key])    # Fill the header with the class names
     results = [header]                                                  # Init the list of the results
-    datas = BrowseFTP(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,positions_head,[],google_names,header,conf_pose,conf_google,format,save, save_txt,save_conf,save_crop)
+    datas = BrowseFTP(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,positions_head,[],google_names,header,blur,conf_pose,conf_google,format,save, save_txt,save_conf,save_crop)
 
     results = results + datas
-    print(results)
     return results
  
 """
@@ -524,14 +528,14 @@ class MyFTP_TLS(FTP_TLS):
                                             session=self.sock.session)  # this is the fix
         return conn, size
     
-def DeleteAll(path):
+def DeleteAll(path,exceptions=[]):
     for root, dirs, files in os.walk(path, topdown=False): # from leaf to root
         # Delete all files in the current directory
         for file in files:
             file_path = os.path.join(root, file)
             try:
-                os.remove(file_path)
-                print(f"Deleted file: {file_path}")
+                if not any(exception in file_path for exception in exceptions):
+                    os.remove(file_path)
             except Exception as e:
                 print(f"Failed to delete file: {file_path} - {e}")
 
@@ -539,8 +543,8 @@ def DeleteAll(path):
         for dir in dirs:
             dir_path = os.path.join(root, dir)
             try:
-                os.rmdir(dir_path)
-                print(f"Deleted directory: {dir_path}")
+                if not any(exception in dir_path for exception in exceptions):
+                    os.rmdir(dir_path)
             except Exception as e:
                 print(f"Failed to delete directory: {dir_path} - {e}")
     
@@ -600,6 +604,8 @@ def main(config_file_path='config.json', extention="csv"):
     classes_path = './classes.json'
     classes_exception_path = './classes_exeptions_rules.json'
     
+    blur = config['blur']
+    
     # Verify the authenticity of the files
     if local_folder=="":
         raise Exception("local_folder (image folder) should not be empty")
@@ -630,6 +636,9 @@ def main(config_file_path='config.json', extention="csv"):
     if "oiv7" not in model_name_google:
         raise Exception("This is not a google model. The model name must contain 'oiv7'.")
         
+    if type(blur)!=bool:
+        raise Exception("blur must be a Boolean")
+        
     try:
         thresh_pose = float(thresh_pose)
     except Exception as e:
@@ -654,23 +663,24 @@ def main(config_file_path='config.json', extention="csv"):
             
     if config['image_or_time_csv']=="image": # output csv image per image
         if Use_FTP:
-            results = FtpProcessing(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=0.3,conf_google=0.2,format=False,save=False, save_txt=False,save_conf=False,save_crop=False)
+            results = FtpProcessing(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,blur,conf_pose=0.3,conf_google=0.2,format=False,save=False, save_txt=False,save_conf=False,save_crop=False)
             ftp.quit()
         else:
-            results = classification(local_folder,  model_google, model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=thresh_pose, conf_google = thresh_google, format=False) # Make the prediction
-        DeleteAll(local_folder) # Delete the folders created
+            results = classification(local_folder,  model_google, model_pose, classfication_date_file, classes_path,classes_exception_path,blur,conf_pose=thresh_pose, conf_google = thresh_google, format=False) # Make the prediction
     elif config['image_or_time_csv']=="time": # output csv with date rounded
         if Use_FTP:
-            results = FtpProcessing(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=0.3,conf_google=0.2,format=True,save=False, save_txt=False,save_conf=False,save_crop=False)
+            results = FtpProcessing(ftp,FTP_DIRECTORY,local_folder,model_google,model_pose, classfication_date_file, classes_path,classes_exception_path,blur,conf_pose=0.3,conf_google=0.2,format=True,save=False, save_txt=False,save_conf=False,save_crop=False)
             ftp.quit()
         else: 
-            results = classification(local_folder,  model_google, model_pose, classfication_date_file, classes_path,classes_exception_path,conf_pose=thresh_pose, conf_google = thresh_google, format=True) # Make the prediction
+            results = classification(local_folder,  model_google, model_pose, classfication_date_file, classes_path,classes_exception_path,blur,conf_pose=thresh_pose, conf_google = thresh_google, format=True) # Make the prediction
         # Handle the time
         results = sequence_image(results, config['sequence_duration']) # Look at the sequence duration
         results = gathering_time(results, config['time_step']) # Sum between images of time_step
     else:
         raise Exception("Couldn't read properly image_or_time_csv. The image_or_time_csv must contain 'image' or 'time.")
         
+    if Use_FTP:
+        DeleteAll(local_folder,exceptions=['blur']) # Delete the folders created
         
     # Get our extention
     if not config['output_format']=="":
