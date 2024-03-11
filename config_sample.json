@@ -13,5 +13,5 @@
     "sequence_duration": 10,
     "time_step": "H",
     "output_format": "csv",
-    "blur":false
+    "blur": false
 }
