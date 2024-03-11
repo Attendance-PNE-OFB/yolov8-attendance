@@ -26,7 +26,8 @@ Après :
 cd yolov8-attendance
 ```
 
-Vous aurez également besoin d'installer sur votre machine la librairie exiftool :
+Vous aurez également besoin d'installer sur votre machine la librairie exiftool :  
+
 Linux & Mac :
 ```
 sudo apt install libimage-exiftool-perl
