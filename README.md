@@ -8,7 +8,7 @@ Ce script utilise le modèle de réseau de neurones [YOLOv8](https://docs.ultral
 
 Ce script permet ainsi de compter automatiquement, sans visualisation par l'utilisateur, le nombre de personnes présentes sur des images, leurs directions, activités, âge et sexe notamment dans le cadre de suivis de la fréquentation réalisés avec des pièges photos à déclenchement automatique. Le script compte le nombre maximum d'humains au sein de chaque séquence, retenu comme taille de groupe.
 
-En complément, voir le [rapport de stage](https://data.ecrins-parcnational.fr/documents/stages/2023-09-rapport-stage-Aurelien-Coste-photos-IA-frequentation.pdf) d'Aurélien Coste qui a travaillé en 2023 sur la version utilisant YOLOv4, ainsi que son [support de restitution](https://data.ecrins-parcnational.fr/documents/stages/2023-09-restitution-stage-Aurelien-Coste-photos-IA-frequentation.pdf).
+En complément, voir la [présentation du travail initial à Belledonne sur le sujet](https://hal.science/hal-04315119v1) ainsi que le [rapport de stage](https://data.ecrins-parcnational.fr/documents/stages/2023-09-rapport-stage-Aurelien-Coste-photos-IA-frequentation.pdf) d'Aurélien Coste qui a travaillé en 2023 sur la version utilisant YOLOv4, ainsi que son [support de restitution](https://data.ecrins-parcnational.fr/documents/stages/2023-09-restitution-stage-Aurelien-Coste-photos-IA-frequentation.pdf).
 
 ## Installation
 
