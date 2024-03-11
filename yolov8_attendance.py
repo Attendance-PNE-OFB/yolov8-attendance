@@ -312,19 +312,19 @@ def classification(folder_pics,model_google,model_pose, classfication_date_file,
 # Used to round off dates
 def arrondir_date(dt, periode, tz): 
     try:   
-        # Effectuer l'opération avec la période spécifié
+        # Perform the operation with the specified period
         date = pd.Timestamp(dt).to_period(periode).to_timestamp()
     except: # To avoid a bug, we define the default time step as hour
         print("Error reading value for time_step from config file. Set to basic value, hour.")
-        # Effectuer l'opération avec la période en heures
+        # Perform the operation with the pediod in hours
         date = pd.Timestamp(dt).to_period('H').to_timestamp()
  
-    date = tz.localize(date) # Convertir la date avec le timezone local
-    return date.isoformat() # Renvoyer la date au format ISO
+    date = tz.localize(date) # Convert the date with the local timezone
+    return date.isoformat() # Resend the date to iso format
 
 # Used to process output csv
 def gathering_time(res, time_step, op='Sum'):
-    time_step = time_step.capitalize() # Gère la casse (a=A)
+    time_step = time_step.capitalize() # First letter uppercase rest in lower case
     tz = pytz.timezone("Europe/Paris") # Define the desired time step
     # Creation of a new column with dates rounded according to time step
     id = res[0].index('date')
@@ -374,21 +374,21 @@ def regroup_rows(rows, op):
 
 # Used to look the sequence of our images
 def sequence_image(rows, duration=10):
-    time_prev = "" # Stockage le temps précédent
+    time_prev = "" # keep the previous time
     i = 1
-    header = rows[0] # Stockage de la ligne d'en-tête
-    rows = sorted(rows[1:], key=lambda x: x[0]) # Tri des dates dans notre liste
-    while i < len(rows): # Parcours de chaque élément de la liste
+    header = rows[0] # stock the header
+    rows = sorted(rows[1:], key=lambda x: x[0]) # sort the dates in our list
+    while i < len(rows): # browse each element of the list
         row = rows[i]
-        if time_prev=="": # Si on a pas encore mis le temps précédent
-            time_prev = row[0] # On le met
-        else: # Sinon on compare le temps précedent et le temps actuel
+        if time_prev=="": # if we didn't put the previous time
+            time_prev = row[0] # we put it
+        else: # Selse we compare the previous time with the current
             if (time_prev + pd.Timedelta(seconds=duration)) > row[0]:
-                # Fusion des données de la ligne actuelle avec celles de la ligne précédente
+                # Fusion of datas at the current line with the previous one
                 i-=1
                 row = [max(row[j], rows[i+1][j]) for j in range(1,len(row))]
                 del rows[i+1]
-                time_prev = "" # indique la fin de la séquence
+                time_prev = "" # Indicate the end of the sequence
                 i-=1
             else:
                 time_prev = row[0]
