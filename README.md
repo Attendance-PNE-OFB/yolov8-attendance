@@ -1,5 +1,7 @@
 # YOLOv8_attendance
 
+Version Francaise : [ici](https://github.com/Attendance-PNE-OFB/yolov8-attendance/blob/main/README-FR.md)
+
 Script for automatic detection (of people, their directions, activities, ages, etc.) in images, based on the model [YOLOv8](https://docs.ultralytics.com/fr/models/yolov8/)  trained on the dataset [COCO](https://cocodataset.org/#home) for counting humans and their directions and the data set [Open images dataset V7](https://storage.googleapis.com/openimages/web/index.html) for gender, age and activities.
 
 ## Description
