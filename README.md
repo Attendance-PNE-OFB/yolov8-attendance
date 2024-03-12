@@ -1,32 +1,32 @@
 # YOLOv8_attendance
 
-Script de détection automatique (des personnes, de leurs directions, activités, ages, et autre) dans des images, basé sur le modèle [YOLOv8](https://docs.ultralytics.com/fr/models/yolov8/) entrainé sur le jeu de données [COCO](https://cocodataset.org/#home) pour le comptage d'humain et leurs directions et le jeu de données [Open images dataset V7](https://storage.googleapis.com/openimages/web/index.html) pour le genre, l'âge, les activités.
+Script for automatic detection (of people, their directions, activities, ages, etc.) in images, based on the model [YOLOv8](https://docs.ultralytics.com/fr/models/yolov8/)  trained on the dataset [COCO](https://cocodataset.org/#home) for counting humans and their directions and the data set [Open images dataset V7](https://storage.googleapis.com/openimages/web/index.html) for gender, age and activities.
 
 ## Description
 
-Ce script utilise le modèle de réseau de neurones [YOLOv8](https://docs.ultralytics.com/fr/models/yolov8/) pour détecter des objets dans des images provenant d'un serveur FTP ou d'un répertoire local.
+This script uses the neural network model [YOLOv8](https://docs.ultralytics.com/fr/models/yolov8/) to detect objects in images from an FTP server or local directory.
 
-Ce script permet ainsi de compter automatiquement, sans visualisation par l'utilisateur, le nombre de personnes présentes sur des images, leurs directions, activités, âge et sexe notamment dans le cadre de suivis de la fréquentation réalisés avec des pièges photos à déclenchement automatique. Le script compte le nombre maximum d'humains au sein de chaque séquence, retenu comme taille de groupe.
+This script automatically counts, without user visualization, the number of people present in images, their directions, activities, age, and gender, notably as part of monitoring attendance conducted with automatic-triggered camera traps. The script calculates the maximum number of humans within each sequence, which is retained as the group size.
 
-En complément, voir la [présentation du travail initial à Belledonne sur le sujet](https://hal.science/hal-04315119v1) ainsi que le [rapport de stage](https://data.ecrins-parcnational.fr/documents/stages/2023-09-rapport-stage-Aurelien-Coste-photos-IA-frequentation.pdf) d'Aurélien Coste qui a travaillé en 2023 sur la version utilisant YOLOv4, ainsi que son [support de restitution](https://data.ecrins-parcnational.fr/documents/stages/2023-09-restitution-stage-Aurelien-Coste-photos-IA-frequentation.pdf).
+For more information, see the [presentation of initial work on the subject in Belledonne](https://hal.science/hal-04315119v1) as well as the [internship report](https://data.ecrins-parcnational.fr/documents/stages/2023-09-rapport-stage-Aurelien-Coste-photos-IA-frequentation.pdf) Aurélien Coste, who worked on the YOLOv4 version in 2023, and his [feedback medium](https://data.ecrins-parcnational.fr/documents/stages/2023-09-restitution-stage-Aurelien-Coste-photos-IA-frequentation.pdf).
 
 ## Installation
 
-Commencez par cloner le dépôt git.
+Start by cloning the git repository.
 
 ```
 git clone git@github.com:Attendance-PNE-OFB/yolov8-attendance.git
 ```
-ou
+or
 ```
 git clone https://github.com/Attendance-PNE-OFB/yolov8-attendance.git
 ```
-Après : 
+After : 
 ```
 cd yolov8-attendance
 ```
 
-Vous aurez également besoin d'installer sur votre machine la librairie exiftool :  
+You will also need to install the exiftool library on your machine: 
 
 Linux & Mac :
 ```
@@ -35,7 +35,7 @@ sudo apt install libimage-exiftool-perl
 Windows :
 https://exiftool.org/install.html#Windows
 
-Ensuite, il vous faut créer votre version du fichier de configuration.
+Next, you need to create your version of the configuration file.
 
 Linux & Mac :
 ```
@@ -46,38 +46,38 @@ Windows :
 copy config_sample.json config.json
 ```
 
-#### Description des paramètres de configuration
+#### Description of configuration parameters
 
-- **ftp_server :** Nom du serveur FTP  
-  Si vous ne voulez pas utiliser de FTP, il faut laisser le champ vide (`""`) 
-  Dans ce cas, la classification se fera via le répertoire local indiqué dans le paramètre `local_folder`  
-- **ftp_username :** Username pour la connexion au serveur FTP  
-- **ftp_password :** Mot de passe pour la connexion au serveur FTP  
-- **ftp_directory :** Répertoire contenant les images sur le serveur FTP  
-- **local_folder :** En mode FTP, il s'agit du répertoire dans lequel les images seront téléchargées.   
-  En mode local, il s'agit du répertoire contenant les images à classifier  
-- **output_folder :** Répertoire dans lequel les fichiers de sortie seront stockés
-- **model_name_pose :** Nom du model pose souhaité ["yolov8n-pose.pt", "yolov8s-pose.pt", "yolov8m-pose.pt", "yolov8l-pose.pt", "yolov8x-pose.pt", "yolov8x-pose-p6.pt"]
-- **treshold_pose :** Valeur du seuil de classification pour le modèle pose. Cette valeur varie de 0 à 1. Plus la valeur est basse, plus nous sommes permissifs avec les classifications. Plus la valeur est haute, plus nous sommes restrictifs avec les classifications  
-- **model_name_google :** Nom du model pose souhaité ["yolov8n-oiv7.pt", "yolov8s-oiv7.pt", "yolov8m-oiv7.pt", "yolov8l-oiv7.pt", "yolov8x-oiv7.pt"]
-- **treshold_google :** Valeur du seuil de classification pour le modèle Google. Cette valeur varie de 0 à 1. Plus la valeur est basse, plus nous sommes permissifs avec les classifications. Plus la valeur est haute, plus nous sommes restrictifs avec les classifications
-- **image_or_time_csv :** Indique le contenu de sortie pour le fichier. Les valeurs possibles sont ["image", "time"]. "image" -> le fichier de sortie contiendra les classifications par image. "time" -> le fichier de sortie contiendra les classifications en fonction du temps des photos  
-- **sequence_duration :** Valeur (en secondes) du temps de séquence. Le temps de séquence est utilisé par le script pour compter les groupes d'individus. Lors de la classification de l'image n, si l'image n-1 a été classifiée il y a moins du temps de séquence choisi alors le script considère qu'il s'agit du même groupe d'individus et donc il ne compte pas deux fois ce groupe.  
-  La valeur de base est de 10 secondes. Selon la fréquentation de votre sentier, vous pouvez baisser jusqu'à 5 s'il est très fréquenté et monter jusqu'à 15 s'il est très peu fréquenté. Au-delà de cet intervalle, les résultats sont généralement moins bons.  
-- **time_step :** Pas de temps pour concaténer les classifications du modèle et sortir un fichier avec un nombre de passage en fonction du pas de temps choisi.  
-  Valeur de base : 'H' (Hour), peut prendre les valeurs : 'D', 'M' et 'Y'  (Day, Month, Year)  
-- **output_format :** Format du fichier de sortie. 
-  Valeur de base 'csv', peut prendre les valeurs : 'dat'
-- **blur :** Prend la valeur True ou False. True = copie et floutage des images de base (ne supprime pas les images brutes). False = pas de floutage
+- **ftp_server :** FTP server name  
+  If you don't want to use FTP, leave the field blank. (`""`) 
+  In this case, classification will take place via the local directory indicated in the parameter `local_folder`  
+- **ftp_username :** Username to connect to the FTP server  
+- **ftp_password :** Password for connection to the FTP server    
+- **ftp_directory :** Directory containing images on the FTP server     
+- **local_folder :** In FTP mode, this is the directory to which the images will be downloaded.   
+  In local mode, this is the directory containing the images to be classified  
+- **output_folder :** Directory in which output files will be stored  
+- **model_name_pose :** Name of desired installation model ["yolov8n-pose.pt", "yolov8s-pose.pt", "yolov8m-pose.pt", "yolov8l-pose.pt", "yolov8x-pose.pt", "yolov8x-pose-p6.pt"]  
+- **treshold_pose :** Classification threshold value for the pose model. This value varies from 0 to 1. The lower the value, the more permissive we are with the classifications. The higher the value, the more restrictive we are with classifications.  
+- **model_name_google :** Name of desired installation model ["yolov8n-oiv7.pt", "yolov8s-oiv7.pt", "yolov8m-oiv7.pt", "yolov8l-oiv7.pt", "yolov8x-oiv7.pt"]
+- **treshold_google :** Classification threshold value for the Google model. This value varies from 0 to 1. The lower the value, the more permissive we are with classifications. The higher the value, the more restrictive we are with classifications.  
+- **image_or_time_csv :** Indicates the output content for the file. Possible values are ["image", "time"]. "image" -> the output file will contain the image classifications. "time" -> the output file will contain the time-based classifications of the photos    
+- **sequence_duration :** Value (in seconds) of the sequence time. The sequence time is used by the script to count the groups of individuals. When classifying image n, if image n-1 was classified less than the chosen sequence time ago, the script considers that it is the same group of individuals and therefore does not count this group twice.    
+  The basic value is 10 seconds. Depending on how busy your path is, you can lower the time to 5 if it's very busy and raise it to 15 if it's very lightly used. Beyond this interval, the results are generally less good.    
+- **time_step :** Time step to concatenate the model classifications and output a file with a number of runs depending on the time step chosen.  
+  Valeur de base : 'H' (Hour), can take the values : 'D', 'M' et 'Y'  (Day, Month, Year)  
+- **output_format :** Output file format.    
+  Base value 'csv', can take the following values: 'dat'.  
+- **blur :** Takes the value True or False. True = copy and blur base images (does not delete raw images if FTP not used). False = no blurring  
 
-Une fois le fichier de configuration modifié selon vos besoins, vous pouvez créer un environnement virtuel python :
+Once you have modified the configuration file to suit your needs, you can create a virtual python :  
 
 ```
 python3 -m virtualenv venv
 source venv/bin/activate
 pip install -e .
 ```
-ou
+or  
 ```
 conda env create -n <my-env> -f environment.yml
 conda activate <my-env>
@@ -85,34 +85,34 @@ conda activate <my-env>
 
 ## Utilisation
 
-Pour lancer le script, exécuter :
+To run the script, execute :
 
 ```
 python3 yolov8_attendance.py
 ```
-ou
+or
 ```
 python yolov8_attendance.py
 ```
 
-N'oubliez pas de créer/modifier votre fichier de config !
+Don't forget to create/modify your config file!
 
 ## Classes.json
-Basé sur les 600 labels reconnue par le modèle yolov8 entrainé sur le dataset de google.  
-Tous les cas sont compté comme 1 élément. Si 3 bike wheel, nous pouvons le compter comme 3 bike car cette élément sera gérer dans classes_exeptions_rules.json.  
-2 cas :  
+Based on the 600 labels recognised by the yolov8 model trained on the google dataset.    
+All cases are counted as 1 element. If 3 bike wheel, we can count it as 3 bike because this element will be managed in classes_exeptions_rules.json.    
+2 cases :  
 ### "5": "Alpaca" 
-Représente la position du label dans les 600 de googles avec le nom du label.  
+Shows the label's position in Google's 600 search results, together with the label's name.   
 ### "Animal":{ 
-Un groupement de labels de google.  
-Doit contenir une fonction parmis "max", "min", "sum" qui definie la méthode de comptage.  
+A group of google labels.    
+Must contain a function from "max", "min", "sum" which defines the counting method.    
 _Exemple :_  
-Detection : 1 chien, 2 chats, 3 souris  
-max(1 chien, 2 chats, 3 souris) = 3 animaux  
-min(1 chien, 2 chats, 3 souris) = 1 animal  
-sum(1 chien, 2 chats, 3 souris) = 6 animaux  
+Detection : 1 dog, 2 cats, 3 mouses  
+max(1 dog, 2 cats, 3 mouses) = 3 animals  
+min(1 dog, 2 cats, 3 mouses) = 1 animal  
+sum(1 dog, 2 cats, 3 mouses) = 6 animals  
 
-Ajouter des sous fonctions est possible : 
+You can add sub-functions: 
 ```
 "max":{
   "sum":{
@@ -125,7 +125,7 @@ Ajouter des sous fonctions est possible :
 
 ## classes_exeptions_rules.json
 Permet de gérer les élements qui doivent être compter d'une manière spécifique.  
-"wheel":"/2" Permettera de diviser par 2 tous les labels contenant le mot clé wheel.  
+"wheel":"/2" All labels containing the wheel keyword will be divided by 2.  
 _Exemple :_  
 3 car wheel, 2 bike wheel, 1 dog  
 will give us : 2 car wheel, 1 bike wheel, 1 dog  
@@ -133,8 +133,8 @@ will give us : 2 car wheel, 1 bike wheel, 1 dog
 ## Auteurs
 
 * Mathieu Garel (OFB)
-* Aurélien Coste (Parc national des Ecrins /  Polytech student)
-* Florian Machenaud (Polytech student)
-* Lony Riffard (Polytech student)
-* Esteban Thevenon (Polytech student)
+* Aurélien Coste (Parc national des Ecrins /  Polytech student) [Linkedin](https://www.linkedin.com/in/aur%C3%A9lien-coste-a30155254/)
+* Esteban Thevenon (Polytech student) [Linkedin](https://www.linkedin.com/in/esteban-thevenon-97958a1b7/)
+* Florian Machenaud (Polytech student) [Linkedin](https://www.linkedin.com/in/florian-machenaud/)
+* Lony Riffard (Polytech student) [Linkedin](https://www.linkedin.com/in/lony-riffard-99715b201/)
 * Théo Lechémia (Parc national des Ecrins)
