@@ -135,8 +135,8 @@ will give us : 2 car wheel, 1 bike wheel, 1 dog
 ## Auteurs
 
 * Mathieu Garel (OFB)
-* Aurélien Coste (Parc national des Ecrins /  Polytech student) [Linkedin](https://www.linkedin.com/in/aur%C3%A9lien-coste-a30155254/)
-* Esteban Thevenon (Polytech student) [Linkedin](https://www.linkedin.com/in/esteban-thevenon-97958a1b7/)
-* Florian Machenaud (Polytech student) [Linkedin](https://www.linkedin.com/in/florian-machenaud/)
-* Lony Riffard (Polytech student) [Linkedin](https://www.linkedin.com/in/lony-riffard-99715b201/)
+* Aurélien Coste (Parc national des Ecrins /  Polytech Grenoble student) [Linkedin](https://www.linkedin.com/in/aur%C3%A9lien-coste-a30155254/)
+* Esteban Thevenon (Polytech Grenoble student) [Linkedin](https://www.linkedin.com/in/esteban-thevenon-97958a1b7/)
+* Florian Machenaud (Polytech Grenoble student) [Linkedin](https://www.linkedin.com/in/florian-machenaud/)
+* Lony Riffard (Polytech Grenoble student) [Linkedin](https://www.linkedin.com/in/lony-riffard-99715b201/)
 * Théo Lechémia (Parc national des Ecrins)
