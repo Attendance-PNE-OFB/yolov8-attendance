@@ -32,9 +32,19 @@ RIGHT_ANKLE:    int = 32
 [0,0,0,0,0]
 """
 
+
 def GetDirection(person):
-    directions = np.add(GetDirectionLegs(person),GetDirectionArms(person))
-    return np.add(directions,GetDirectionHead(person)) if (all(direction==0 for direction in directions) or all(direction<1 for direction in directions[:4]) or ( sum(directions[-3:]) == sum(directions[:2])==1)) else directions
+    directions = np.add(GetDirectionLegs(person), GetDirectionArms(person))
+    return (
+        np.add(directions, GetDirectionHead(person))
+        if (
+            all(direction == 0 for direction in directions)
+            or all(direction < 1 for direction in directions[:4])
+            or (sum(directions[-3:]) == sum(directions[:2]) == 1)
+        )
+        else directions
+    )
+
 
 # si bras gauche à gauche du torse et bras droite à droite alors verticale sinon orienté
 def GetDirectionArms(person):
@@ -54,30 +64,58 @@ def GetDirectionArms(person):
     right_elbow_y = person[17]
     right_wrist_y = person[21]
 
-
     left = 0
     right = 0
 
-    if left_shoulder_x>0 and left_shoulder_y>0 and left_elbow_x>0 and left_elbow_y>0 and left_wrist_x>0 and left_wrist_y>0:
-        left = TraingleDirectionLR(left_shoulder_x, left_shoulder_y, left_elbow_x, left_elbow_y, left_wrist_x, left_wrist_y)
+    if (
+        left_shoulder_x > 0
+        and left_shoulder_y > 0
+        and left_elbow_x > 0
+        and left_elbow_y > 0
+        and left_wrist_x > 0
+        and left_wrist_y > 0
+    ):
+        left = TraingleDirectionLR(
+            left_shoulder_x,
+            left_shoulder_y,
+            left_elbow_x,
+            left_elbow_y,
+            left_wrist_x,
+            left_wrist_y,
+        )
 
-    if right_shoulder_x>0 and right_shoulder_y>0 and right_elbow_x>0 and right_elbow_y>0 and right_wrist_x>0 and right_wrist_y>0:
-        right = TraingleDirectionLR(right_shoulder_x, right_shoulder_y, right_elbow_x, right_elbow_y, right_wrist_x, right_wrist_y)
+    if (
+        right_shoulder_x > 0
+        and right_shoulder_y > 0
+        and right_elbow_x > 0
+        and right_elbow_y > 0
+        and right_wrist_x > 0
+        and right_wrist_y > 0
+    ):
+        right = TraingleDirectionLR(
+            right_shoulder_x,
+            right_shoulder_y,
+            right_elbow_x,
+            right_elbow_y,
+            right_wrist_x,
+            right_wrist_y,
+        )
 
-    result = left+right
+    result = left + right
 
     if result == 2:
-        return [1,0,0,0,0]
-    elif result ==-2:
-        return [0,1,0,0,0]
-    elif result ==1:
-        return [0.5,0,0,0,0]
+        return [1, 0, 0, 0, 0]
+    elif result == -2:
+        return [0, 1, 0, 0, 0]
+    elif result == 1:
+        return [0.5, 0, 0, 0, 0]
     elif result == -1:
-        return [0,0.5,0,0,0]
-    elif right!=0 and left+right==0:
-        return [0,0,0,0,1]
+        return [0, 0.5, 0, 0, 0]
+    elif right != 0 and left + right == 0:
+        return [0, 0, 0, 0, 1]
     else:
-        return [0,0,0,0,0]
+        return [0, 0, 0, 0, 0]
+
 
 def GetDirectionLegs(person):
     left_hip_x = person[22]
@@ -99,29 +137,47 @@ def GetDirectionLegs(person):
     left = 0
     right = 0
 
-    if left_hip_x>0 and left_hip_y>0 and left_knee_x>0 and left_knee_y>0 and left_ankle_x>0 and left_ankle_y>0:
-        left = TraingleDirectionLR(left_hip_x, left_hip_y, left_knee_x, left_knee_y, left_ankle_x, left_ankle_y)
+    if (
+        left_hip_x > 0
+        and left_hip_y > 0
+        and left_knee_x > 0
+        and left_knee_y > 0
+        and left_ankle_x > 0
+        and left_ankle_y > 0
+    ):
+        left = TraingleDirectionLR(
+            left_hip_x, left_hip_y, left_knee_x, left_knee_y, left_ankle_x, left_ankle_y
+        )
 
-    if right_hip_x>0 and right_hip_y>0 and right_knee_x>0 and right_knee_y>0 and right_ankle_x>0 and right_ankle_y>0:
-        right = TraingleDirectionLR(right_hip_x, right_hip_y, right_knee_x, right_knee_y, right_ankle_x, right_ankle_y)
+    if (
+        right_hip_x > 0
+        and right_hip_y > 0
+        and right_knee_x > 0
+        and right_knee_y > 0
+        and right_ankle_x > 0
+        and right_ankle_y > 0
+    ):
+        right = TraingleDirectionLR(
+            right_hip_x, right_hip_y, right_knee_x, right_knee_y, right_ankle_x, right_ankle_y
+        )
 
-    result = left+right
+    result = left + right
 
     if result == 2:
-        return [0,1,0,0,0]
-    elif result ==-2:
-        return [1,0,0,0,0]
-    elif result ==1:
-        return [0,0.5,0,0,0]
+        return [0, 1, 0, 0, 0]
+    elif result == -2:
+        return [1, 0, 0, 0, 0]
+    elif result == 1:
+        return [0, 0.5, 0, 0, 0]
     elif result == -1:
-        return [0.5,0,0,0,0]
-    elif right!=0 and left+right==0:
-        return [0,0,0,0,1]
+        return [0.5, 0, 0, 0, 0]
+    elif right != 0 and left + right == 0:
+        return [0, 0, 0, 0, 1]
     else:
-        return [0,0,0,0,0]
+        return [0, 0, 0, 0, 0]
 
 
-def TraingleDirectionLR(x1,y1,x2,y2,x3,y3):
+def TraingleDirectionLR(x1, y1, x2, y2, x3, y3):
     # Définition des sommets du triangle
     A = np.array([x1, y1])  # Sommet A
     B = np.array([x2, y2])  # Sommet B
@@ -148,6 +204,7 @@ def TraingleDirectionLR(x1,y1,x2,y2,x3,y3):
     else:
         return 0
 
+
 def GetDirectionHead(person):
     nose_x = person[0]
     left_eye_x = person[2]
@@ -155,29 +212,36 @@ def GetDirectionHead(person):
     left_ear_x = person[6]
     right_ear_x = person[8]
 
-    eyes_distance = left_eye_x-right_eye_x
+    eyes_distance = left_eye_x - right_eye_x
 
-    if nose_x>0 and left_eye_x>0 and right_eye_x>0:
-        if nose_x<left_eye_x and nose_x<right_eye_x:
-            return [1,0,0,0,0]
-        elif nose_x>left_eye_x and nose_x>right_eye_x:
-            return [0,1,0,0,0]
-    if left_ear_x>0 and right_ear_x>0 and left_eye_x==0 and right_eye_x==0:
-        return [0,0,1,0,0]
-    if left_ear_x>0 and right_ear_x==0:
-        if left_eye_x>0 and right_eye_x==0:
-            return [1,0,0,0,0]
-        elif left_eye_x>0 and right_eye_x>0:
-            return [0.5,0,0,0.5,0]
-        elif left_eye_x==0 and right_eye_x==0:
-            return [1,0,0.5,0,0]
-    if left_ear_x==0 and right_ear_x>0:
-        if left_eye_x==0 and right_eye_x>0:
-            return [0,1,0,0,0]
-        elif left_eye_x>0 and right_eye_x>0:
-            return [0,0.5,0,0.5,0]
-        elif left_eye_x==0 and right_eye_x==0:
-            return [0,1,0.5,0,0]
-    if nose_x>0 and left_eye_x>0 and right_eye_x>0 and right_eye_x<nose_x and nose_x<left_eye_x:
-        return [0,0,0,1,0]
-    else: return [0,0,0,0,0]
+    if nose_x > 0 and left_eye_x > 0 and right_eye_x > 0:
+        if nose_x < left_eye_x and nose_x < right_eye_x:
+            return [1, 0, 0, 0, 0]
+        elif nose_x > left_eye_x and nose_x > right_eye_x:
+            return [0, 1, 0, 0, 0]
+    if left_ear_x > 0 and right_ear_x > 0 and left_eye_x == 0 and right_eye_x == 0:
+        return [0, 0, 1, 0, 0]
+    if left_ear_x > 0 and right_ear_x == 0:
+        if left_eye_x > 0 and right_eye_x == 0:
+            return [1, 0, 0, 0, 0]
+        elif left_eye_x > 0 and right_eye_x > 0:
+            return [0.5, 0, 0, 0.5, 0]
+        elif left_eye_x == 0 and right_eye_x == 0:
+            return [1, 0, 0.5, 0, 0]
+    if left_ear_x == 0 and right_ear_x > 0:
+        if left_eye_x == 0 and right_eye_x > 0:
+            return [0, 1, 0, 0, 0]
+        elif left_eye_x > 0 and right_eye_x > 0:
+            return [0, 0.5, 0, 0.5, 0]
+        elif left_eye_x == 0 and right_eye_x == 0:
+            return [0, 1, 0.5, 0, 0]
+    if (
+        nose_x > 0
+        and left_eye_x > 0
+        and right_eye_x > 0
+        and right_eye_x < nose_x
+        and nose_x < left_eye_x
+    ):
+        return [0, 0, 0, 1, 0]
+    else:
+        return [0, 0, 0, 0, 0]

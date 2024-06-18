@@ -2,14 +2,15 @@ import cv2
 import numpy as np
 import os
 
+
 # Blur ONE image and replace it in the base folder if it contains a human
-def blur_Image_and_Replace(result,path=''):
+def blur_Image_and_Replace(result, path=""):
     if path:
-        if not os.path.exists(path): 
-            os.makedirs(path) 
+        if not os.path.exists(path):
+            os.makedirs(path)
     if isinstance(result, list):
         result = result[0]
-    INDEX_PERSON = list(result.names.values()).index('person')
+    INDEX_PERSON = list(result.names.values()).index("person")
 
     all_boxes = np.asarray(result.boxes.xyxy.tolist()).astype(int)  # Recover all boxes of the res
     classes = np.asarray(result.boxes.cls.tolist()).astype(int)  # All the classes
@@ -28,7 +29,6 @@ def blur_Image_and_Replace(result,path=''):
             blur = cv2.GaussianBlur(ROI, ksize=(205, 105), sigmaX=0, sigmaY=0)
             im[y1:y2, x1:x2] = blur
         if path:
-            cv2.imwrite(os.path.normpath(os.path.join(path,os.path.basename(result.path))), im)
+            cv2.imwrite(os.path.normpath(os.path.join(path, os.path.basename(result.path))), im)
         else:
             cv2.imwrite(result.path, im)
-            

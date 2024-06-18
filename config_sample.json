@@ -1,6 +1,7 @@
 {
     "ftp_server": "",
     "ftp_username": "username",
+    "ftp_port": 21,
     "ftp_password": "mdp",
     "ftp_directory": "/images_folder",
     "local_folder": "/home/local_folder_images",

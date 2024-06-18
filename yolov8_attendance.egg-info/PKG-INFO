@@ -1,0 +1,14 @@
+Metadata-Version: 2.1
+Name: yolov8-attendance
+Version: 2.0.0
+Summary: Script de classification d'image basé sur le modèle yolov8
+Home-page: https://github.com/PnEcrins/yolov8-attendance
+Maintainer: Parc national des Écrins
+License: UNKNOWN
+Platform: UNKNOWN
+Requires-Python: >=3.9
+Provides-Extra: dev
+License-File: LICENSE
+
+UNKNOWN
+

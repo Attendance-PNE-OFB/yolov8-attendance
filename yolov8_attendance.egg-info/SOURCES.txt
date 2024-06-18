@@ -1,0 +1,8 @@
+LICENSE
+README.md
+setup.py
+yolov8_attendance.egg-info/PKG-INFO
+yolov8_attendance.egg-info/SOURCES.txt
+yolov8_attendance.egg-info/dependency_links.txt
+yolov8_attendance.egg-info/requires.txt
+yolov8_attendance.egg-info/top_level.txt
