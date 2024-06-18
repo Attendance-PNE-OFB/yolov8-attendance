@@ -382,9 +382,10 @@ def classification(
                         conf=conf_pose,
                     )
                     result_pose = DefSkelPoints(predict_pose)
-                    blur_Image_and_Replace(
-                        predict_pose, os.path.normpath(os.path.join(folder_pics, "blur"))
-                    )
+                    if blur:
+                        blur_Image_and_Replace(
+                            predict_pose, os.path.normpath(os.path.join(folder_pics, "blur"))
+                        )
 
                     if format:  # True = time format | False = image format
                         date = datetime.strptime(
@@ -411,7 +412,6 @@ def classification(
                         end="",
                         flush=True,
                     )  # Process position bar
-    print()
     return results
 
 
@@ -544,8 +544,8 @@ def DownloadImage(ftp, element, local_folder, FTP_DIRECTORY):
         with open(image, "wb") as f:
             try:
                 ftp.retrbinary("RETR " + element, f.write)
-            except Exception:
-                print()
+            except Exception as e:
+                print(str(e))
                 print("Error downloading ", image)
                 return False
     return image
@@ -597,7 +597,8 @@ def FtpClassification(
             conf=conf_pose,
         )
         result_pose = DefSkelPoints(predict_pose)
-        blur_Image_and_Replace(predict_pose, os.path.normpath(os.path.join(local_folder, "blur")))
+        if blur:
+            blur_Image_and_Replace(predict_pose, os.path.normpath(os.path.join(local_folder, "blur")))
 
         if format:  # True = time format | False = image format
             date = datetime.strptime(
@@ -679,7 +680,7 @@ def BrowseFTP(
                             "\r", pourcentage, "% [---]", end="", flush=True
                         )  # Process position bar
                 elif not os.path.isfile(element):
-                    results.extends(
+                    results.extend(
                         BrowseFTP(
                             ftp,
                             FTP_DIRECTORY + "/" + element,
@@ -842,10 +843,11 @@ def main(config_file_path="config.json", extention="csv"):
         FTP_USER = config["ftp_username"]
         FTP_PASS = config["ftp_password"]
         FTP_DIRECTORY = config["ftp_directory"]
+        FTP_PORT = config["ftp_port"]
         # Establish FTP connection and upload files
         try:
             ftp = MyFTP_TLS(timeout=5000)  # socket.gaierror
-            ftp.connect(FTP_HOST, 3921, timeout=5000)
+            ftp.connect(FTP_HOST, FTP_PORT, timeout=5000)
             ftp.login(FTP_USER, FTP_PASS)  # implicit call to connect() #ftplib.error_perm
             ftp.prot_p()  # Activer la protection des données
             ftp.cwd(FTP_DIRECTORY)  # ftplib.error_perm
