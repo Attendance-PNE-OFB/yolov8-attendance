@@ -1,0 +1,10 @@
+PyExifTool
+pandas
+pydantic
+pytz
+torch
+ultralytics
+validators
+
+[dev]
+black
