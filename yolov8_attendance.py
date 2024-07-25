@@ -638,79 +638,78 @@ def BrowseFTP(
     save_conf=False,
     save_crop=False,
 ):
-    while True:
+    # while True:
+    ftp.cwd(FTP_DIRECTORY)  # Go to the folder
+    elements = ftp.nlst()  # Get the folder elements
+    for i in range(len(elements)):  # For each elements
         try:
-            ftp.cwd(FTP_DIRECTORY)  # Go to the folder
-            elements = ftp.nlst()  # Get the folder elements
-
-            for i in range(len(elements)):  # For each elements
-                element = elements[i]
-                if IsImage(element):  # If it's an image
-                    pourcentage = round(((i) * 100 / len(elements)), 2)
-                    print("\r", pourcentage, "% [   ]", end="", flush=True)  # Process position bar
-                    image = DownloadImage(ftp, element, local_folder, FTP_DIRECTORY)
-                    print("\r", pourcentage, "% [-  ]", end="", flush=True)  # Process position bar
-                    if image:
-                        results.append(
-                            FtpClassification(
-                                image,
-                                positions_head,
-                                classfication_date_file,
-                                model_google,
-                                model_pose,
-                                classes_path,
-                                classes_exception_path,
-                                google_names,
-                                header,
-                                blur,
-                                local_folder,
-                                conf_pose,
-                                conf_google,
-                                save,
-                                save_txt,
-                                save_conf,
-                                save_crop,
-                            )
-                        )
-                        print(
-                            "\r", pourcentage, "% [-- ]", end="", flush=True
-                        )  # Process position bar
-                        os.remove(image)
-                        print(
-                            "\r", pourcentage, "% [---]", end="", flush=True
-                        )  # Process position bar
-                elif not os.path.isfile(element):
-                    results.extend(
-                        BrowseFTP(
-                            ftp,
-                            FTP_DIRECTORY + "/" + element,
-                            os.path.normpath(os.path.join(local_folder)),
+            element = elements[i]
+            if IsImage(element):  # If it's an image
+                pourcentage = round(((i) * 100 / len(elements)), 2)
+                print("\r", pourcentage, "% [   ]", end="", flush=True)  # Process position bar
+                image = DownloadImage(ftp, element, local_folder, FTP_DIRECTORY)
+                print("\r", pourcentage, "% [-  ]", end="", flush=True)  # Process position bar
+                if image:
+                    results.append(
+                        FtpClassification(
+                            image,
+                            positions_head,
+                            classfication_date_file,
                             model_google,
                             model_pose,
-                            classfication_date_file,
                             classes_path,
                             classes_exception_path,
-                            positions_head,
-                            [],
                             google_names,
                             header,
                             blur,
+                            local_folder,
                             conf_pose,
                             conf_google,
-                            format,
                             save,
                             save_txt,
                             save_conf,
                             save_crop,
                         )
                     )
-                else:
-                    print()
-                    print(element, " : ", type(element), " not take into considerations")
-            break
+                    print(
+                        "\r", pourcentage, "% [-- ]", end="", flush=True
+                    )  # Process position bar
+                    os.remove(image)
+                    print(
+                        "\r", pourcentage, "% [---]", end="", flush=True
+                    )  # Process position bar
+            elif not os.path.isfile(element):
+                results.extend(
+                    BrowseFTP(
+                        ftp,
+                        FTP_DIRECTORY + "/" + element,
+                        os.path.normpath(os.path.join(local_folder)),
+                        model_google,
+                        model_pose,
+                        classfication_date_file,
+                        classes_path,
+                        classes_exception_path,
+                        positions_head,
+                        [],
+                        google_names,
+                        header,
+                        blur,
+                        conf_pose,
+                        conf_google,
+                        format,
+                        save,
+                        save_txt,
+                        save_conf,
+                        save_crop,
+                    )
+                )
+            else:
+                print()
+                print(element, " : ", type(element), " not take into considerations")
         except Exception as e:
             print()
-            print("Error : ", e, " Restarting....")
+            print("Error : ", e, " Continue....")
+            continue
     return results
 
 
@@ -887,12 +886,14 @@ def main(config_file_path="config.json", extention="csv"):
     if local_folder == "":
         raise Exception("local_folder (image folder) should not be empty")
     if not os.path.exists(local_folder):
-        raise Exception("local_folder path does not exist")
+        print("Local folder does not exist... create it")
+        os.makedirs(local_folder)
 
     if output_folder == "":
         raise Exception("output_folder should not be empty")
     if not os.path.exists(output_folder):
-        raise Exception("output_folder path does not exist")
+        print("Output folder does not exist... create it")
+        os.makedirs(output_folder)
 
     if classes_exception_path == "":
         raise Exception("classes_exception_path should not be empty")
