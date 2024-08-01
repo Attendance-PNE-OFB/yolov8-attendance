@@ -1036,9 +1036,12 @@ def main(config_file_path="config.json", extention="csv"):
 
     # Create unique timestr
     timestr = time.strftime("%Y-%m-%d %H-%M-%S")
+
+    file_prefix = config["ftp_directory"] if config["ftp_server"] != "" else local_folder
+    file_prefix = file_prefix.replace("/", "_")
     filename = os.path.normpath(
         os.path.join(
-            output_folder, os.path.basename(local_folder) + "_" + timestr + "." + extention
+            output_folder, file_prefix + "_" + timestr + "." + extention
         )
     )
 
