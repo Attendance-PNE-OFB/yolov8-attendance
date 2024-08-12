@@ -887,13 +887,13 @@ def main(config_file_path="config.json", extention="csv"):
         raise Exception("local_folder (image folder) should not be empty")
     if not os.path.exists(local_folder):
         print("Local folder does not exist... create it")
-        os.makedirs(local_folder)
+        os.makedirs(local_folder, exist_ok=True)
 
     if output_folder == "":
         raise Exception("output_folder should not be empty")
     if not os.path.exists(output_folder):
         print("Output folder does not exist... create it")
-        os.makedirs(output_folder)
+        os.makedirs(output_folder, exist_ok=True)
 
     if classes_exception_path == "":
         raise Exception("classes_exception_path should not be empty")
